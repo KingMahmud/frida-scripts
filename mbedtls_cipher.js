@@ -1,4 +1,4 @@
-// Created by Mahmud. Thanks to MrMax for helping.
+// Created by Mahmud. Thanks to MrMax(Github : https://github.com/MohamedX99) for helping.
 // llc.js used.
 
 // Only for Android usage, if anyone needs to use for other platform i hope you can manage to make it compatible ;)
