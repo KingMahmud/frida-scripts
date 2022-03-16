@@ -20,16 +20,15 @@ onLibraryLoad("yourlibname", function(){
 */
 
 function onLibraryLoad(library_name, callback) {
-    let library_loaded = false;
     Interceptor.attach(Module.findExportByName(null, 'android_dlopen_ext'), {
         onEnter: (args) => {
             let library_path = args[0].readCString();
             if (library_path.includes(library_name)) {
-                library_loaded = true;
+                this.library_loaded = true;
             }
         },
         onLeave: (retval) => {
-            if (library_loaded) {
+            if (this.library_loaded) {
                 console.log(`[*] Library loaded : ${library_name}`);
                 console.log("[*] Executing callback");
                 callback();
