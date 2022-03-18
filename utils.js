@@ -1,5 +1,7 @@
 // Created by Mahmud.
+
 /*
+
 Usage : copy paste into your script and access the functions with Helpers.
 
 Example of another util created using getMatched
@@ -9,6 +11,7 @@ function getMatchedSymbols(library_name, must_contain) {
 }
 
 */
+
 global.Helpers = class {
     static getMatched(array, property, must_contain) {
         const matched = [];
@@ -33,6 +36,12 @@ global.Helpers = class {
         throw new Error(`${must_contain} not found in any classloader`);
     }
 
+    /*
+    I did not create the "android_dlopen_ext" hook for checking if library loaded, i found it in some scripts i had.
+    So created a simple function for easy usage.
+    Credit goes to the person who written that.
+    */
+    
     static onLibraryLoad(library_name, callback) {
         Interceptor.attach(Module.findExportByName(null, "android_dlopen_ext"), {
             onEnter: function(args) {
