@@ -1,3 +1,17 @@
+// Created by Mahmud.
+
+/*
+
+Usage : copy paste into your script and access the functions with Helpers.
+
+Example of another util created using getMatched
+
+function getMatchedSymbols(library_name, must_contain) {
+    return Helpers.getMatched(Process.getModuleByName(library_name).enumerateSymbols(), "name", must_contain);
+}
+
+*/
+
 global.Helpers = class {
 
     static getMatched(array, property, must_contain) {
