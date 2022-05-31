@@ -12,7 +12,9 @@ function getMatchedSymbols(library_name, must_contain) {
 
 Example of using onLibraryLoad
 
-onLibraryLoad("libnative.so", function(module){
+Helpers.init();
+
+Helpers.onLibraryLoad("libnative.so", function(module){
 // module = frida Module object for that library
 });
 
