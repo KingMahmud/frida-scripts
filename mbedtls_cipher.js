@@ -6,7 +6,7 @@
 
 const library_name = "lib<whatever>.so";
 
-onLibraryLoad(library_name, (module) => {
+Helpers.onLibraryLoad(library_name, (module) => {
 
     /*
     typedef enum {
