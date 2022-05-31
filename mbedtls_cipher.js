@@ -254,11 +254,11 @@ global.Helpers = class {
 
             if (do_dlopen_ptr !== null && call_constructors_ptr !== null) {
                 let name = null;
-                
+
                 Interceptor.attach(do_dlopen_ptr, function(args) {
                     name = args[0].readCString();
                 });
-                
+
                 Interceptor.attach(call_constructors_ptr, function(args) {
                     if (name !== null) {
                         const ollcs = self.#ollcs;
@@ -272,7 +272,7 @@ global.Helpers = class {
                                 break;
                             }
                         }
-                        
+
                         if (library_name !== null && callback !== null) {
                             const module = Process.findModuleByName(name);
                             if (module !== null) {
@@ -280,9 +280,7 @@ global.Helpers = class {
                                 callback(module);
                                 // nullify after callback has been called to avoid weird behaviors
                                 name = null;
-                                module = null;
-                                library_name = null;
-                                callback = null;
+                                ollcs.delete(library_name);                                
                             }
                         }
                     }
