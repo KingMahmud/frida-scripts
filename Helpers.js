@@ -7,26 +7,28 @@ Usage : copy paste into your script, do Helpers.init() then access the functions
 Example of another util created using getMatched
 
 function getMatchedSymbols(library_name, must_contain) {
-    return Helpers.getMatched(Process.getModuleByName(library_name).enumerateSymbols(), "name", must_contain);
+    return _Helpers.getMatched(Process.getModuleByName(library_name).enumerateSymbols(), "name", must_contain);
 }
 
 Example of using onLibraryLoad
 
-Helpers.init();
+const _Helpers = new Helpers();
 
-Helpers.onLibraryLoad("libnative.so", function(module){
-// module = frida Module object for that library
+_Helpers.onLibraryLoad("libnative.so", function(module){
+// module = frida module object for that library
 });
 
 */
 
-global.Helpers = class {
+class Helpers {
 
-    static #ollcs = new Map();
+    #cache = new Map();
+
+    #ollcs = new Map();
 
     // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://api.mtr.pub/FrenchYeti/interruptor)   
     // Related with OnLibraryLoad
-    static init() {
+    constructor() {
         const self = this;
 
         const linker = Process.findModuleByName(Process.arch.includes("64") ? "linker64" : "linker");
@@ -81,24 +83,25 @@ global.Helpers = class {
                                 callback(module);
                                 // nullify after callback has been called to avoid weird behaviors
                                 name = null;
-                                ollcs.delete(library_name);                                
+                                ollcs.delete(library_name);
                             }
                         }
                     }
                 });
             } else {
-                console.error("[*] Failed to find do_dlopen and call_constructors in linker");
+                console.error(`[*] do_dlopen  : ${do_dlopen_ptr}`);
+                console.error(`[*] call_constructors : ${call_constructors_ptr}`);
             }
         } else {
             console.error("[*] Failed to find linker");
         }
     }
 
-    static getMatched(array, property, must_contain) {
+    getMatched(array, property, must_contain) {
         return array.filter(value => must_contain.every(str => value[property].includes(str)));
     }
 
-    static getSpecificClassLoader(must_contain) {
+    getSpecificClassLoader(must_contain) {
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
                 loader.findClass(must_contain);
@@ -111,11 +114,17 @@ global.Helpers = class {
         throw new Error(`${must_contain} not found in any classloader`);
     }
 
-    static getClassWrapper(klass) {
+    getClassWrapper(klass) {
+        const cache = this.#cache;
+        if (cache.has(klass)) {
+            return cache.get(klass);
+        }
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
                 loader.findClass(klass);
-                return Java.ClassFactory.get(loader).use(klass);
+                const val = Java.ClassFactory.get(loader).use(klass);
+                cache.set(klass, val);
+                return val;
             } catch (e) {
                 // ignore and continue
                 continue;
@@ -124,13 +133,22 @@ global.Helpers = class {
         throw new Error(`${klass} not found`);
     }
 
-    static onLibraryLoad(library_name, callback) {
+    // I failed to name the function programatically (out of ideas).
+    magic(func, callback) {
+        let val;
+        func(function() {
+            val = callback.bind(this).apply(callback, arguments);
+        });
+        return val;
+    }
+
+    onLibraryLoad(library_name, callback) {
         this.#ollcs.set(library_name, callback);
     }
 
     // Old implementation
     /*
-    static onLibraryLoad(library_name, callback) {
+    onLibraryLoad(library_name, callback) {
         Interceptor.attach(Module.findExportByName(null, "android_dlopen_ext"), {
             onEnter: function(args) {
                 let library_path = args[0].readCString();
@@ -150,3 +168,7 @@ global.Helpers = class {
     }
     */
 };
+
+// const helpers = new Helpers();
+
+// module.exports = helpers;
