@@ -4,9 +4,11 @@
 // Only for Android usage, if anyone needs to use for other platform i hope you can manage to make it compatible ;)
 // Send a PR as well :D
 
+const $Helpers = new Helper();
+
 const library_name = "lib<whatever>.so";
 
-Helpers.onLibraryLoad(library_name, (module) => {
+$Helpers.onLibraryLoad(library_name, module => {
 
     /*
     typedef enum {
@@ -97,24 +99,24 @@ Helpers.onLibraryLoad(library_name, (module) => {
     } mbedtls_cipher_type_t;
     */
 
-    //const mbedtls_cipher_info_t *mbedtls_cipher_info_from_type( const mbedtls_cipher_type_t cipher_type );
+    // const mbedtls_cipher_info_t *mbedtls_cipher_info_from_type( const mbedtls_cipher_type_t cipher_type );
     Interceptor.attach(module.findExportByName("mbedtls_cipher_info_from_type"), {
-        onEnter: (args) => {
+        onEnter: args => {
             console.log("mbedtls_cipher_info_from_type start");
             console.log("type : " + args[0].toInt32());
         },
-        onLeave: (ret) => {
+        onLeave: ret => {
             console.log("mbedtls_cipher_info_from_type end");
         }
     });
 
-    //int mbedtls_cipher_setup( mbedtls_cipher_context_t *ctx, const mbedtls_cipher_info_t *cipher_info );
+    // int mbedtls_cipher_setup( mbedtls_cipher_context_t *ctx, const mbedtls_cipher_info_t *cipher_info );
     Interceptor.attach(module.findExportByName("mbedtls_cipher_setup"), {
-        onEnter: (args) => {
+        onEnter: args => {
             console.log("mbedtls_cipher_setup start");
             console.log("type : " + args[1].readPointer().toInt32());
         },
-        onLeave: (ret) => {
+        onLeave: ret => {
             console.log("mbedtls_cipher_setup end");
         }
     });
@@ -127,16 +129,16 @@ Helpers.onLibraryLoad(library_name, (module) => {
     } mbedtls_operation_t;
     */
 
-    //int mbedtls_cipher_setkey( mbedtls_cipher_context_t *ctx, const unsigned char *key, int key_bitlen, const mbedtls_operation_t operation );
+    // int mbedtls_cipher_setkey( mbedtls_cipher_context_t *ctx, const unsigned char *key, int key_bitlen, const mbedtls_operation_t operation );
     Interceptor.attach(module.findExportByName("mbedtls_cipher_setkey"), {
-        onEnter: (args) => {
+        onEnter: args => {
             console.log("mbedtls_cipher_setkey start");
             console.log("key : " + args[1].readCString());
             console.log("hexdump : " + hd(args[1], 128));
             console.log("key_bitlen : " + args[2].toInt32());
             console.log("operation : " + args[3].toInt32());
         },
-        onLeave: (ret) => {
+        onLeave: ret => {
             console.log("mbedtls_cipher_setkey end");
         }
     });
@@ -151,33 +153,33 @@ Helpers.onLibraryLoad(library_name, (module) => {
     } mbedtls_cipher_padding_t;
     */
 
-    //int mbedtls_cipher_set_padding_mode( mbedtls_cipher_context_t *ctx, mbedtls_cipher_padding_t mode );
+    // int mbedtls_cipher_set_padding_mode( mbedtls_cipher_context_t *ctx, mbedtls_cipher_padding_t mode );
     Interceptor.attach(module.findExportByName("mbedtls_cipher_set_padding_mode"), {
-        onEnter: (args) => {
+        onEnter: args => {
             console.log("mbedtls_cipher_set_padding_mode start");
             console.log("mode : " + args[1].toInt32());
         },
-        onLeave: (ret) => {
+        onLeave: ret => {
             console.log("mbedtls_cipher_set_padding_mode end");
         }
     });
 
-    //int mbedtls_cipher_set_iv( mbedtls_cipher_context_t *ctx, const unsigned char *iv, size_t iv_len );
+    // int mbedtls_cipher_set_iv( mbedtls_cipher_context_t *ctx, const unsigned char *iv, size_t iv_len );
     Interceptor.attach(module.findExportByName("mbedtls_cipher_set_iv"), {
-        onEnter: (args) => {
+        onEnter: args => {
             console.log("mbedtls_cipher_set_iv start");
             console.log("iv : " + args[1].readCString());
             console.log("iv len : " + args[2].toInt32());
             console.log("hexdump : " + hd(args[1], args[2].toUInt32()));
         },
-        onLeave: (ret) => {
+        onLeave: ret => {
             console.log("mbedtls_cipher_set_iv end");
         }
     });
 
-    //int mbedtls_cipher_update( mbedtls_cipher_context_t *ctx, const unsigned char *input, size_t ilen, unsigned char *output, size_t *olen );
+    // int mbedtls_cipher_update( mbedtls_cipher_context_t *ctx, const unsigned char *input, size_t ilen, unsigned char *output, size_t *olen );
     Interceptor.attach(module.findExportByName("mbedtls_cipher_update"), {
-        onEnter: (args) => {
+        onEnter: args => {
             console.log("mbedtls_cipher_update start");
             console.log("input : " + args[1].readCString());
             console.log("input len : " + args[2].toInt32());
@@ -185,7 +187,7 @@ Helpers.onLibraryLoad(library_name, (module) => {
             this.buf = args[3];
             this.len = args[4];
         },
-        onLeave: (ret) => {
+        onLeave: ret => {
             console.log("output : " + this.buf.readCString());
             console.log("output len : " + this.len.readULong());
             console.log("hexdump : " + hd(this.buf, this.len.readULong()));
@@ -193,21 +195,20 @@ Helpers.onLibraryLoad(library_name, (module) => {
         }
     });
 
-    //int mbedtls_cipher_finish( mbedtls_cipher_context_t *ctx, unsigned char *output, size_t *olen );
+    // int mbedtls_cipher_finish( mbedtls_cipher_context_t *ctx, unsigned char *output, size_t *olen );
     Interceptor.attach(module.findExportByName("mbedtls_cipher_finish"), {
-        onEnter: (args) => {
+        onEnter: args => {
             console.log("mbedtls_cipher_finish start");
             this.buf = args[1];
             this.len = args[2];
         },
-        onLeave: (ret) => {
+        onLeave: ret => {
             console.log("output : " + this.buf.readCString());
             console.log("output len : " + this.len.readULong());
             console.log("hexdump : " + hd(this.buf, this.len.readULong()));
             console.log("mbedtls_cipher_finish end");
         }
     });
-
 });
 
 function hd(addr, len) {
@@ -219,52 +220,38 @@ function hd(addr, len) {
     });
 }
 
-global.Helpers = class {
+class Helpers {
+    #cache = new Map();
 
-    static #ollcs = new Map();
+    #ollcs = new Map();
 
-    // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://api.mtr.pub/FrenchYeti/interruptor)   
-    // Related with OnLibraryLoad
-    static init() {
+    constructor() {
+        // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://api.mtr.pub/FrenchYeti/interruptor)
         const self = this;
-
         const linker = Process.findModuleByName(Process.arch.includes("64") ? "linker64" : "linker");
-
         if (linker !== null) {
             // https://android.googlesource.com/platform/bionic/+/master/linker/linker.cpp
             // void* do_dlopen(const char* name, int flags, const android_dlextinfo* extinfo, const void* caller_addr)
             let do_dlopen_ptr = null;
-
             // https://android.googlesource.com/platform/bionic/+/master/linker/linker_soinfo.cpp
             // void soinfo::call_constructors()
             let call_constructors_ptr = null;
-
             for (const sym of linker.enumerateSymbols()) {
                 const name = sym.name;
-                if (name.includes("do_dlopen")) {
-                    do_dlopen_ptr = sym.address;
-                } else if (name.includes("call_constructors")) {
-                    call_constructors_ptr = sym.address;
-                }
-
-                if (do_dlopen_ptr !== null && call_constructors_ptr !== null) {
-                    break;
-                }
+                if (name.includes("do_dlopen")) do_dlopen_ptr = sym.address;
+                else if (name.includes("call_constructors")) call_constructors_ptr = sym.address;
+                if (do_dlopen_ptr !== null && call_constructors_ptr !== null) break;
             }
-
             if (do_dlopen_ptr !== null && call_constructors_ptr !== null) {
                 let name = null;
-
                 Interceptor.attach(do_dlopen_ptr, function(args) {
                     name = args[0].readCString();
                 });
-
                 Interceptor.attach(call_constructors_ptr, function(args) {
                     if (name !== null) {
                         const ollcs = self.#ollcs;
                         let library_name = null;
                         let callback = null;
-
                         for (const key of ollcs.keys()) {
                             if (name.includes(key)) {
                                 library_name = key;
@@ -272,7 +259,6 @@ global.Helpers = class {
                                 break;
                             }
                         }
-
                         if (library_name !== null && callback !== null) {
                             const module = Process.findModuleByName(name);
                             if (module !== null) {
@@ -280,24 +266,23 @@ global.Helpers = class {
                                 callback(module);
                                 // nullify after callback has been called to avoid weird behaviors
                                 name = null;
-                                ollcs.delete(library_name);                                
+                                ollcs.delete(library_name);
                             }
                         }
                     }
                 });
             } else {
-                console.error("[*] Failed to find do_dlopen and call_constructors in linker");
+                console.error(`[*] do_dlopen  : ${do_dlopen_ptr}`);
+                console.error(`[*] call_constructors : ${call_constructors_ptr}`);
             }
-        } else {
-            console.error("[*] Failed to find linker");
-        }
+        } else console.error("[*] Failed to find linker");
     }
 
-    static getMatched(array, property, must_contain) {
+    getMatched(array, property, must_contain) {
         return array.filter(value => must_contain.every(str => value[property].includes(str)));
     }
 
-    static getSpecificClassLoader(must_contain) {
+    getSpecificClassLoader(must_contain) {
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
                 loader.findClass(must_contain);
@@ -310,11 +295,15 @@ global.Helpers = class {
         throw new Error(`${must_contain} not found in any classloader`);
     }
 
-    static getClassWrapper(klass) {
+    getClassWrapper(klass) {
+        const cache = this.#cache;
+        if (cache.has(klass)) return cache.get(klass);
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
                 loader.findClass(klass);
-                return Java.ClassFactory.get(loader).use(klass);
+                const val = Java.ClassFactory.get(loader).use(klass);
+                cache.set(klass, val);
+                return val;
             } catch (e) {
                 // ignore and continue
                 continue;
@@ -323,29 +312,36 @@ global.Helpers = class {
         throw new Error(`${klass} not found`);
     }
 
-    static onLibraryLoad(library_name, callback) {
+    // I failed to name the function programatically (out of ideas).
+    magic(func, callback) {
+        let val;
+        func(function() {
+            val = callback.bind(this).apply(callback, arguments);
+        });
+        return val;
+    }
+
+    onLibraryLoad(library_name, callback) {
         this.#ollcs.set(library_name, callback);
     }
 
     // Old implementation
     /*
-    static onLibraryLoad(library_name, callback) {
-        Interceptor.attach(Module.findExportByName(null, "android_dlopen_ext"), {
-            onEnter: function(args) {
-                let library_path = args[0].readCString();
-                if (library_path.includes(library_name)) {
-                    this.library_loaded = true;
-                }
-            },
-            onLeave: function(retval) {
-                if (this.library_loaded) {
-                    console.log(`[*] Library loaded : ${library_name}`);
-                    console.log("[*] Executing callback");
-                    callback(Process.findModuleByName(library_name));
-                    console.log("[*] Callback executed");
-                }
-            }
-        });
-    }
-    */
+      onLibraryLoad(library_name, callback) {
+          Interceptor.attach(Module.findExportByName(null, "android_dlopen_ext"), {
+              onEnter: function(args) {
+                  let library_path = args[0].readCString();
+                  if (library_path.includes(library_name)) {
+                      this.library_loaded = true;
+                  }
+              },
+              onLeave: function(retval) {
+                  if (this.library_loaded) {
+                      console.log(`[*] Library loaded : ${library_name}`);                    
+                      callback(Process.findModuleByName(library_name));                    
+                  }
+              }
+          });
+      }
+      */
 };

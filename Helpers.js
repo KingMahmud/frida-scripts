@@ -2,7 +2,7 @@
 
 /*
 
-Usage : copy paste into your script, do Helpers.init() then access the functions with Helpers.
+Usage : copy paste into your script, create Helper instance then access the functions..
 
 Example of another util created using getMatched
 
@@ -26,48 +26,33 @@ class Helpers {
 
     #ollcs = new Map();
 
-    // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://api.mtr.pub/FrenchYeti/interruptor)   
-    // Related with OnLibraryLoad
     constructor() {
+        // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://api.mtr.pub/FrenchYeti/interruptor)
         const self = this;
-
         const linker = Process.findModuleByName(Process.arch.includes("64") ? "linker64" : "linker");
-
         if (linker !== null) {
             // https://android.googlesource.com/platform/bionic/+/master/linker/linker.cpp
             // void* do_dlopen(const char* name, int flags, const android_dlextinfo* extinfo, const void* caller_addr)
             let do_dlopen_ptr = null;
-
             // https://android.googlesource.com/platform/bionic/+/master/linker/linker_soinfo.cpp
             // void soinfo::call_constructors()
             let call_constructors_ptr = null;
-
             for (const sym of linker.enumerateSymbols()) {
                 const name = sym.name;
-                if (name.includes("do_dlopen")) {
-                    do_dlopen_ptr = sym.address;
-                } else if (name.includes("call_constructors")) {
-                    call_constructors_ptr = sym.address;
-                }
-
-                if (do_dlopen_ptr !== null && call_constructors_ptr !== null) {
-                    break;
-                }
+                if (name.includes("do_dlopen")) do_dlopen_ptr = sym.address;
+                else if (name.includes("call_constructors")) call_constructors_ptr = sym.address;
+                if (do_dlopen_ptr !== null && call_constructors_ptr !== null) break;
             }
-
             if (do_dlopen_ptr !== null && call_constructors_ptr !== null) {
                 let name = null;
-
                 Interceptor.attach(do_dlopen_ptr, function(args) {
                     name = args[0].readCString();
                 });
-
                 Interceptor.attach(call_constructors_ptr, function(args) {
                     if (name !== null) {
                         const ollcs = self.#ollcs;
                         let library_name = null;
                         let callback = null;
-
                         for (const key of ollcs.keys()) {
                             if (name.includes(key)) {
                                 library_name = key;
@@ -75,7 +60,6 @@ class Helpers {
                                 break;
                             }
                         }
-
                         if (library_name !== null && callback !== null) {
                             const module = Process.findModuleByName(name);
                             if (module !== null) {
@@ -92,9 +76,7 @@ class Helpers {
                 console.error(`[*] do_dlopen  : ${do_dlopen_ptr}`);
                 console.error(`[*] call_constructors : ${call_constructors_ptr}`);
             }
-        } else {
-            console.error("[*] Failed to find linker");
-        }
+        } else console.error("[*] Failed to find linker");
     }
 
     getMatched(array, property, must_contain) {
@@ -116,9 +98,7 @@ class Helpers {
 
     getClassWrapper(klass) {
         const cache = this.#cache;
-        if (cache.has(klass)) {
-            return cache.get(klass);
-        }
+        if (cache.has(klass)) return cache.get(klass);
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
                 loader.findClass(klass);
@@ -148,25 +128,23 @@ class Helpers {
 
     // Old implementation
     /*
-    onLibraryLoad(library_name, callback) {
-        Interceptor.attach(Module.findExportByName(null, "android_dlopen_ext"), {
-            onEnter: function(args) {
-                let library_path = args[0].readCString();
-                if (library_path.includes(library_name)) {
-                    this.library_loaded = true;
-                }
-            },
-            onLeave: function(retval) {
-                if (this.library_loaded) {
-                    console.log(`[*] Library loaded : ${library_name}`);
-                    console.log("[*] Executing callback");
-                    callback(Process.findModuleByName(library_name));
-                    console.log("[*] Callback executed");
-                }
-            }
-        });
-    }
-    */
+      onLibraryLoad(library_name, callback) {
+          Interceptor.attach(Module.findExportByName(null, "android_dlopen_ext"), {
+              onEnter: function(args) {
+                  let library_path = args[0].readCString();
+                  if (library_path.includes(library_name)) {
+                      this.library_loaded = true;
+                  }
+              },
+              onLeave: function(retval) {
+                  if (this.library_loaded) {
+                      console.log(`[*] Library loaded : ${library_name}`);                    
+                      callback(Process.findModuleByName(library_name));                    
+                  }
+              }
+          });
+      }
+      */
 };
 
 // const helpers = new Helpers();
