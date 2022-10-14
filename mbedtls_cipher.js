@@ -130,7 +130,7 @@ class Helpers {
       */
 };
 
-const $Helpers = new Helper();
+const $Helpers = new Helpers();
 
 const library_name = "lib<whatever>.so";
 
