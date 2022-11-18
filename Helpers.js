@@ -20,8 +20,6 @@ _Helpers.onLibraryLoad("libnative.so", function(module){
 
 */
 
-// https://github.com/KingMahmud/FridaScripts/blob/main/Helpers.js
-
 class Helpers {
 
     #cache = new Map();
@@ -131,23 +129,23 @@ class Helpers {
 
     // Old implementation
     /*
-      onLibraryLoad(library_name, callback) {
-          Interceptor.attach(Module.findExportByName(null, "android_dlopen_ext"), {
-              onEnter: function(args) {
-                  let library_path = args[0].readCString();
-                  if (library_path.includes(library_name)) {
-                      this.library_loaded = true;
-                  }
-              },
-              onLeave: function(retval) {
-                  if (this.library_loaded) {
-                      console.log(`[*] Library loaded : ${library_name}`);                    
-                      callback(Process.findModuleByName(library_name));                    
-                  }
-              }
-          });
-          Interceptor.flush();
-      }
+    onLibraryLoad(library_name, callback) {
+        Interceptor.attach(Module.findExportByName(null, "android_dlopen_ext"), {
+            onEnter: function(args) {
+                let library_path = args[0].readCString();
+                if (library_path.includes(library_name)) {
+                    this.library_loaded = true;
+                }
+            },
+            onLeave: function(retval) {
+                if (this.library_loaded) {
+                    console.log(`[*] Library loaded : ${library_name}`);
+                    callback(Process.findModuleByName(library_name));
+                }
+            }
+        });
+        Interceptor.flush();
+    }
     */
 }
 

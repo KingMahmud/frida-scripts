@@ -5,12 +5,13 @@
 // Send a PR as well :D
 
 class Helpers {
+
     #cache = new Map();
 
     #ollcs = new Map();
 
     constructor() {
-        // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://api.mtr.pub/FrenchYeti/interruptor)
+        // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://github.com/FrenchYeti/interruptor)
         const self = this;
         const linker = Process.findModuleByName(Process.arch.includes("64") ? "linker64" : "linker");
         if (linker !== null) {
@@ -55,6 +56,7 @@ class Helpers {
                         }
                     }
                 });
+                Interceptor.flush();
             } else {
                 console.error(`[*] do_dlopen  : ${do_dlopen_ptr}`);
                 console.error(`[*] call_constructors : ${call_constructors_ptr}`);
@@ -111,24 +113,25 @@ class Helpers {
 
     // Old implementation
     /*
-      onLibraryLoad(library_name, callback) {
-          Interceptor.attach(Module.findExportByName(null, "android_dlopen_ext"), {
-              onEnter: function(args) {
-                  let library_path = args[0].readCString();
-                  if (library_path.includes(library_name)) {
-                      this.library_loaded = true;
-                  }
-              },
-              onLeave: function(retval) {
-                  if (this.library_loaded) {
-                      console.log(`[*] Library loaded : ${library_name}`);                    
-                      callback(Process.findModuleByName(library_name));                    
-                  }
-              }
-          });
-      }
-      */
-};
+    onLibraryLoad(library_name, callback) {
+        Interceptor.attach(Module.findExportByName(null, "android_dlopen_ext"), {
+            onEnter: function(args) {
+                let library_path = args[0].readCString();
+                if (library_path.includes(library_name)) {
+                    this.library_loaded = true;
+                }
+            },
+            onLeave: function(retval) {
+                if (this.library_loaded) {
+                    console.log(`[*] Library loaded : ${library_name}`);
+                    callback(Process.findModuleByName(library_name));
+                }
+            }
+        });
+        Interceptor.flush();
+    }
+    */
+}
 
 const $Helpers = new Helpers();
 
@@ -225,26 +228,22 @@ $Helpers.onLibraryLoad(library_name, module => {
     } mbedtls_cipher_type_t;
     */
 
-    // const mbedtls_cipher_info_t *mbedtls_cipher_info_from_type( const mbedtls_cipher_type_t cipher_type );
+    // const mbedtls_cipher_info_t *mbedtls_cipher_info_from_type(const mbedtls_cipher_type_t cipher_type)
     Interceptor.attach(module.findExportByName("mbedtls_cipher_info_from_type"), {
         onEnter: args => {
             console.log("mbedtls_cipher_info_from_type start");
             console.log("type : " + args[0].toInt32());
         },
-        onLeave: ret => {
-            console.log("mbedtls_cipher_info_from_type end");
-        }
+        onLeave: ret => console.log("mbedtls_cipher_info_from_type end");
     });
 
-    // int mbedtls_cipher_setup( mbedtls_cipher_context_t *ctx, const mbedtls_cipher_info_t *cipher_info );
+    // int mbedtls_cipher_setup(mbedtls_cipher_context_t *ctx, const mbedtls_cipher_info_t *cipher_info)
     Interceptor.attach(module.findExportByName("mbedtls_cipher_setup"), {
         onEnter: args => {
             console.log("mbedtls_cipher_setup start");
             console.log("type : " + args[1].readPointer().toInt32());
         },
-        onLeave: ret => {
-            console.log("mbedtls_cipher_setup end");
-        }
+        onLeave: ret => console.log("mbedtls_cipher_setup end");
     });
 
     /*
@@ -255,18 +254,16 @@ $Helpers.onLibraryLoad(library_name, module => {
     } mbedtls_operation_t;
     */
 
-    // int mbedtls_cipher_setkey( mbedtls_cipher_context_t *ctx, const unsigned char *key, int key_bitlen, const mbedtls_operation_t operation );
+    // int mbedtls_cipher_setkey(mbedtls_cipher_context_t *ctx, const unsigned char *key, int key_bitlen, const mbedtls_operation_t operation)
     Interceptor.attach(module.findExportByName("mbedtls_cipher_setkey"), {
         onEnter: args => {
             console.log("mbedtls_cipher_setkey start");
             console.log("key : " + args[1].readCString());
-            console.log("hexdump : " + hd(args[1], 128));
+            console.log("hexdump : " + hexdump(args[1], 128));
             console.log("key_bitlen : " + args[2].toInt32());
             console.log("operation : " + args[3].toInt32());
         },
-        onLeave: ret => {
-            console.log("mbedtls_cipher_setkey end");
-        }
+        onLeave: ret => console.log("mbedtls_cipher_setkey end");
     });
 
     /*
@@ -279,66 +276,64 @@ $Helpers.onLibraryLoad(library_name, module => {
     } mbedtls_cipher_padding_t;
     */
 
-    // int mbedtls_cipher_set_padding_mode( mbedtls_cipher_context_t *ctx, mbedtls_cipher_padding_t mode );
+    // int mbedtls_cipher_set_padding_mode(mbedtls_cipher_context_t *ctx, mbedtls_cipher_padding_t mode)
     Interceptor.attach(module.findExportByName("mbedtls_cipher_set_padding_mode"), {
         onEnter: args => {
             console.log("mbedtls_cipher_set_padding_mode start");
             console.log("mode : " + args[1].toInt32());
         },
-        onLeave: ret => {
-            console.log("mbedtls_cipher_set_padding_mode end");
-        }
+        onLeave: ret => console.log("mbedtls_cipher_set_padding_mode end");
     });
 
-    // int mbedtls_cipher_set_iv( mbedtls_cipher_context_t *ctx, const unsigned char *iv, size_t iv_len );
+    // int mbedtls_cipher_set_iv(mbedtls_cipher_context_t *ctx, const unsigned char *iv, size_t iv_len)
     Interceptor.attach(module.findExportByName("mbedtls_cipher_set_iv"), {
         onEnter: args => {
             console.log("mbedtls_cipher_set_iv start");
             console.log("iv : " + args[1].readCString());
             console.log("iv len : " + args[2].toInt32());
-            console.log("hexdump : " + hd(args[1], args[2].toUInt32()));
+            console.log("hexdump : " + hexdump(args[1], args[2].toUInt32()));
         },
-        onLeave: ret => {
-            console.log("mbedtls_cipher_set_iv end");
-        }
+        onLeave: ret => console.log("mbedtls_cipher_set_iv end");
     });
 
-    // int mbedtls_cipher_update( mbedtls_cipher_context_t *ctx, const unsigned char *input, size_t ilen, unsigned char *output, size_t *olen );
+    // int mbedtls_cipher_update(mbedtls_cipher_context_t *ctx, const unsigned char *input, size_t ilen, unsigned char *output, size_t *olen)
     Interceptor.attach(module.findExportByName("mbedtls_cipher_update"), {
         onEnter: args => {
             console.log("mbedtls_cipher_update start");
             console.log("input : " + args[1].readCString());
             console.log("input len : " + args[2].toInt32());
-            console.log("hexdump : " + hd(args[1], args[2].toInt32()));
-            this.buf = args[3];
+            console.log("hexdump : " + hexdump(args[1], args[2].toInt32()));
+            this.buffer = args[3];
             this.len = args[4];
         },
         onLeave: ret => {
-            console.log("output : " + this.buf.readCString());
+            console.log("output : " + this.buffer.readCString());
             console.log("output len : " + this.len.readULong());
-            console.log("hexdump : " + hd(this.buf, this.len.readULong()));
+            console.log("hexdump : " + hexdump(this.buffer, this.len.readULong()));
             console.log("mbedtls_cipher_update end");
         }
     });
 
-    // int mbedtls_cipher_finish( mbedtls_cipher_context_t *ctx, unsigned char *output, size_t *olen );
+    // int mbedtls_cipher_finish(mbedtls_cipher_context_t *ctx, unsigned char *output, size_t *olen)
     Interceptor.attach(module.findExportByName("mbedtls_cipher_finish"), {
         onEnter: args => {
             console.log("mbedtls_cipher_finish start");
-            this.buf = args[1];
+            this.buffer = args[1];
             this.len = args[2];
         },
         onLeave: ret => {
-            console.log("output : " + this.buf.readCString());
+            console.log("output : " + this.buffer.readCString());
             console.log("output len : " + this.len.readULong());
-            console.log("hexdump : " + hd(this.buf, this.len.readULong()));
+            console.log("hexdump : " + hexdump(this.buffer, this.len.readULong()));
             console.log("mbedtls_cipher_finish end");
         }
     });
+
+    Interceptor.flush();
 });
 
-function hd(addr, len) {
-    return hexdump(addr, {
+function hexdump(address, len) {
+    return hexdump(address, {
         offset: 0,
         length: len,
         header: true,
