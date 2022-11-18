@@ -20,6 +20,8 @@ _Helpers.onLibraryLoad("libnative.so", function(module){
 
 */
 
+// https://github.com/KingMahmud/FridaScripts/blob/main/Helpers.js
+
 class Helpers {
 
     #cache = new Map();
@@ -27,7 +29,7 @@ class Helpers {
     #ollcs = new Map();
 
     constructor() {
-        // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://api.mtr.pub/FrenchYeti/interruptor)
+        // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://github.com/FrenchYeti/interruptor)
         const self = this;
         const linker = Process.findModuleByName(Process.arch.includes("64") ? "linker64" : "linker");
         if (linker !== null) {
@@ -72,6 +74,7 @@ class Helpers {
                         }
                     }
                 });
+                Interceptor.flush();
             } else {
                 console.error(`[*] do_dlopen  : ${do_dlopen_ptr}`);
                 console.error(`[*] call_constructors : ${call_constructors_ptr}`);
@@ -143,9 +146,10 @@ class Helpers {
                   }
               }
           });
+          Interceptor.flush();
       }
-      */
-};
+    */
+}
 
 // const helpers = new Helpers();
 
