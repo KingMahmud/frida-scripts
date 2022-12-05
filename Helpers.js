@@ -45,32 +45,38 @@ class Helpers {
             }
             if (do_dlopen_ptr !== null && call_constructors_ptr !== null) {
                 let name = null;
-                Interceptor.attach(do_dlopen_ptr, function(args) {
-                    name = args[0].readCString();
+                Interceptor.attach(do_dlopen_ptr, {
+                    onEnter(args) {
+                        name = args[0].readCString();
+                    },
+                    onLeave(retval) {}
                 });
-                Interceptor.attach(call_constructors_ptr, function(args) {
-                    if (name !== null) {
-                        const ollcs = self.#ollcs;
-                        let library_name = null;
-                        let callback = null;
-                        for (const key of ollcs.keys()) {
-                            if (name.includes(key)) {
-                                library_name = key;
-                                callback = ollcs.get(key);
-                                break;
+                Interceptor.attach(call_constructors_ptr, {
+                    onEnter(args) {
+                        if (name !== null) {
+                            const ollcs = self.#ollcs;
+                            let library_name = null;
+                            let callback = null;
+                            for (const key of ollcs.keys()) {
+                                if (name.includes(key)) {
+                                    library_name = key;
+                                    callback = ollcs.get(key);
+                                    break;
+                                }
+                            }
+                            if (library_name !== null && callback !== null) {
+                                const module = Process.findModuleByName(name);
+                                if (module !== null) {
+                                    console.log(`[*] Library loaded : ${library_name}`);
+                                    callback(module);
+                                    // nullify after callback has been called to avoid weird behaviors
+                                    name = null;
+                                    ollcs.delete(library_name);
+                                }
                             }
                         }
-                        if (library_name !== null && callback !== null) {
-                            const module = Process.findModuleByName(name);
-                            if (module !== null) {
-                                console.log(`[*] Library loaded : ${library_name}`);
-                                callback(module);
-                                // nullify after callback has been called to avoid weird behaviors
-                                name = null;
-                                ollcs.delete(library_name);
-                            }
-                        }
-                    }
+                    },
+                    onLeave(retval) {}
                 });
                 Interceptor.flush();
             } else {
@@ -131,13 +137,13 @@ class Helpers {
     /*
     onLibraryLoad(library_name, callback) {
         Interceptor.attach(Module.findExportByName(null, "android_dlopen_ext"), {
-            onEnter: function(args) {
+            onEnter(args) {
                 let library_path = args[0].readCString();
                 if (library_path.includes(library_name)) {
                     this.library_loaded = true;
                 }
             },
-            onLeave: function(retval) {
+            onLeave(retval) {
                 if (this.library_loaded) {
                     console.log(`[*] Library loaded : ${library_name}`);
                     callback(Process.findModuleByName(library_name));
