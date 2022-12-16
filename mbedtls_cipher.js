@@ -111,7 +111,7 @@ class Helpers {
 
     getMethodWrapperExact(klass, name, paramTypes, returnType) {
         const expectedParamTypesSignature = paramTypes.join(", ");
-        for (const overload of Helpers.getClassWrapper(klass)[name].overloads)
+        for (const overload of this.getClassWrapper(klass)[name].overloads)
             if (expectedParamTypesSignature === overload.argumentTypes.map(type => type.className).join(", ") && returnType === overload.returnType.className)
                 return overload;
         throw new Error(`${klass}#${name}(${expectedParamTypesSignature})${returnType} not found`)
