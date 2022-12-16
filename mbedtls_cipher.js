@@ -23,39 +23,42 @@ class Helpers {
             let call_constructors_ptr = null;
             for (const sym of linker.enumerateSymbols()) {
                 const name = sym.name;
-                if (name.includes("do_dlopen")) do_dlopen_ptr = sym.address;
-                else if (name.includes("call_constructors")) call_constructors_ptr = sym.address;
-                if (do_dlopen_ptr !== null && call_constructors_ptr !== null) break;
+                if (name.includes("do_dlopen"))
+                    do_dlopen_ptr = sym.address;
+                else if (name.includes("call_constructors"))
+                    call_constructors_ptr = sym.address;
+                if (do_dlopen_ptr !== null && call_constructors_ptr !== null)
+                    break;
             }
             if (do_dlopen_ptr !== null && call_constructors_ptr !== null) {
-                let name = null;
+                let ddname = null;
                 Interceptor.attach(do_dlopen_ptr, {
                     onEnter(args) {
-                        name = args[0].readCString();
+                        ddname = args[0].readCString();
                     },
                     onLeave(retval) {}
                 });
                 Interceptor.attach(call_constructors_ptr, {
                     onEnter(args) {
-                        if (name !== null) {
+                        if (ddname !== null) {
                             const ollcs = self.#ollcs;
-                            let library_name = null;
+                            let name = null;
                             let callback = null;
                             for (const key of ollcs.keys()) {
-                                if (name.includes(key)) {
-                                    library_name = key;
+                                if (ddname.includes(key)) {
+                                    name = key;
                                     callback = ollcs.get(key);
                                     break;
                                 }
                             }
-                            if (library_name !== null && callback !== null) {
-                                const module = Process.findModuleByName(name);
+                            if (name !== null && callback !== null) {
+                                const module = Process.findModuleByName(ddname);
                                 if (module !== null) {
-                                    console.log(`[*] Library loaded : ${library_name}`);
+                                    console.log(`[*] Library loaded : ${name}`);
                                     callback(module);
-                                    // nullify after callback has been called to avoid weird behaviors
-                                    name = null;
-                                    ollcs.delete(library_name);
+                                    // Nullify after callback has been called to avoid weird behaviors
+                                    ddname = null;
+                                    ollcs.delete(name);
                                 }
                             }
                         }
@@ -67,29 +70,31 @@ class Helpers {
                 console.error(`[*] do_dlopen  : ${do_dlopen_ptr}`);
                 console.error(`[*] call_constructors : ${call_constructors_ptr}`);
             }
-        } else console.error("[*] Failed to find linker");
+        } else
+            console.error("[*] Failed to find linker");
     }
 
     getMatched(array, property, must_contain) {
         return array.filter(value => must_contain.every(str => value[property].includes(str)));
     }
 
-    getSpecificClassLoader(must_contain) {
+    getSpecificClassLoader(klass) {
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
-                loader.findClass(must_contain);
+                loader.findClass(klass);
                 return loader;
             } catch (e) {
                 // ignore and continue
                 continue;
             }
         }
-        throw new Error(`${must_contain} not found in any classloader`);
+        throw new Error(`${klass} not found in any classloader`);
     }
 
     getClassWrapper(klass) {
         const cache = this.#cache;
-        if (cache.has(klass)) return cache.get(klass);
+        if (cache.has(klass))
+            return cache.get(klass);
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
                 loader.findClass(klass);
@@ -104,33 +109,40 @@ class Helpers {
         throw new Error(`${klass} not found`);
     }
 
-    // I failed to name the function programatically (out of ideas).
+    getMethodWrapperExact(klass, name, paramTypes, returnType) {
+        const expectedParamTypesSignature = paramTypes.join(", ");
+        for (const overload of Helpers.getClassWrapper(klass)[name].overloads)
+            if (expectedParamTypesSignature === overload.argumentTypes.map(type => type.className).join(", ") && returnType === overload.returnType.className)
+                return overload;
+        throw new Error(`${klass}#${name}(${expectedParamTypesSignature})${returnType} not found`)
+    }
+
+    // I failed to name this function programatically (out of ideas).
     magic(func, callback) {
         let val;
         func(function() {
-            val = callback.bind(this).apply(callback, arguments);
+            val = callback.apply(this, arguments);
         });
         return val;
     }
 
-    onLibraryLoad(library_name, callback) {
-        this.#ollcs.set(library_name, callback);
+    onLibraryLoad(name, callback) {
+        this.#ollcs.set(name, callback);
     }
 
     // Old implementation
     /*
-    onLibraryLoad(library_name, callback) {
+    onLibraryLoad(name, callback) {
         Interceptor.attach(Module.findExportByName(null, "android_dlopen_ext"), {
             onEnter(args) {
-                let library_path = args[0].readCString();
-                if (library_path.includes(library_name)) {
-                    this.library_loaded = true;
-                }
+                let path = args[0].readCString();
+                if (path.includes(name)) 
+                    this.loaded = true;
             },
             onLeave(retval) {
-                if (this.library_loaded) {
-                    console.log(`[*] Library loaded : ${library_name}`);
-                    callback(Process.findModuleByName(library_name));
+                if (this.loaded) {
+                    console.log(`[*] Library loaded : ${name}`);
+                    callback(Process.findModuleByName(name));
                 }
             }
         });
@@ -141,9 +153,9 @@ class Helpers {
 
 const $Helpers = new Helpers();
 
-const library_name = "lib<whatever>.so";
+const name = "lib<whatever>.so";
 
-$Helpers.onLibraryLoad(library_name, module => {
+$Helpers.onLibraryLoad(name, function(module) {
 
     /*
     typedef enum {
