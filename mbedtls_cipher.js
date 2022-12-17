@@ -281,7 +281,7 @@ $Helpers.onLibraryLoad(name, function(module) {
         onEnter(args) {
             console.log("mbedtls_cipher_setkey start");
             console.log(`key : ${args[1].readCString()}`);
-            console.log(`hexdump : ${hexdump(args[1], 128)}`);
+            console.log(`hexdump : ${hexdump2args[1], 128)}`);
             console.log(`key_bitlen : ${args[2].toInt32()}`);
             console.log(`operation : ${args[3].toInt32()}`);
         },
@@ -317,7 +317,7 @@ $Helpers.onLibraryLoad(name, function(module) {
             console.log("mbedtls_cipher_set_iv start");
             console.log(`iv : ${args[1].readCString()}`);
             console.log(`iv len : ${args[2].toInt32()}`);
-            console.log(`hexdump : ${hexdump(args[1], args[2].toUInt32())}`);
+            console.log(`hexdump : ${hexdump2args[1], args[2].toUInt32())}`);
         },
         onLeave(retval) {
             console.log("mbedtls_cipher_set_iv end");
@@ -330,14 +330,14 @@ $Helpers.onLibraryLoad(name, function(module) {
             console.log("mbedtls_cipher_update start");
             console.log(`input : ${args[1].readCString()}`);
             console.log(`input len : ${args[2].toInt32()}`);
-            console.log(`hexdump : ${hexdump(args[1], args[2].toInt32())}`);
+            console.log(`hexdump : ${hexdump2args[1], args[2].toInt32())}`);
             this.buffer = args[3];
             this.len = args[4];
         },
         onLeave(retval) {
             console.log(`output : ${this.buffer.readCString()}`);
             console.log(`output len : ${this.len.readULong()}`);
-            console.log(`hexdump : ${hexdump(this.buffer, this.len.readULong())}`);
+            console.log(`hexdump : ${hexdump2this.buffer, this.len.readULong())}`);
             console.log("mbedtls_cipher_update end");
         }
     });
@@ -352,7 +352,7 @@ $Helpers.onLibraryLoad(name, function(module) {
         onLeave(retval) {
             console.log(`output : ${this.buffer.readCString()}`);
             console.log(`output len : ${this.len.readULong()}`);
-            console.log(`hexdump : ${hexdump(this.buffer, this.len.readULong())}`);
+            console.log(`hexdump : ${hexdump2this.buffer, this.len.readULong())}`);
             console.log("mbedtls_cipher_finish end");
         }
     });
@@ -360,7 +360,7 @@ $Helpers.onLibraryLoad(name, function(module) {
     Interceptor.flush();
 });
 
-function hexdump(address, len) {
+function hexdump2(address, len) {
     return hexdump(address, {
         offset: 0,
         length: len,
