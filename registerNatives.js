@@ -32,8 +32,7 @@ class Helpers {
                 Interceptor.attach(do_dlopen_ptr, {
                     onEnter(args) {
                         ddname = args[0].readCString();
-                    },
-                    onLeave(retval) {}
+                    }
                 });
                 Interceptor.attach(call_constructors_ptr, {
                     onEnter(args) {
@@ -41,13 +40,12 @@ class Helpers {
                             const ollcs = self.#ollcs;
                             let name = null;
                             let callback = null;
-                            for (const key of ollcs.keys()) {
+                            for (const key of ollcs.keys())
                                 if (ddname.includes(key)) {
                                     name = key;
                                     callback = ollcs.get(key);
                                     break;
                                 }
-                            }
                             if (name !== null && callback !== null) {
                                 const module = Process.findModuleByName(ddname);
                                 if (module !== null) {
@@ -59,8 +57,7 @@ class Helpers {
                                 }
                             }
                         }
-                    },
-                    onLeave(retval) {}
+                    }
                 });
                 Interceptor.flush();
             } else {
@@ -158,12 +155,12 @@ $Helpers.onLibraryLoad(library, function(module) {
         onEnter(args) {
             if (!DebugSymbol.fromAddress(this.returnAddress).toString().includes(library))
                 return;
-            console.log("env->RegisterNatives()");
+            console.log("[*] env->RegisterNatives()");
             const clazz = args[1];
-            console.log(`Class : ${Java.vm.getEnv().getClassName(clazz)}`);
+            console.log(`[*] Class : ${Java.vm.getEnv().getClassName(clazz)}`);
             const nMethods = parseInt(args[3]);
-            console.log(`Number of Methods : ${nMethods}`);
-            console.log("Methods : ");
+            console.log(`[*] Number of Methods : ${nMethods}`);
+            console.log("[*] Methods : ");
             const methods = args[2];
             for (let i = 0; i < nMethods; i++) {
                 const method = methods.add(i * Process.pointerSize * 3);
@@ -171,7 +168,7 @@ $Helpers.onLibraryLoad(library, function(module) {
                 const signature = method.add(Process.pointerSize).readPointer().readCString();
                 const fnPtr = method.add(Process.pointerSize * 2).readPointer();
                 const offset = fnPtr.sub(module.base);
-                console.log(`${i}.
+                console.log(`[*] ${i}.
                 Method : ${methodName}
                 Signature : ${methodName}${signature}
                 FnPtr : ${fnPtr}

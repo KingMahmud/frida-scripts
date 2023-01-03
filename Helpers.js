@@ -51,8 +51,7 @@ class Helpers {
                 Interceptor.attach(do_dlopen_ptr, {
                     onEnter(args) {
                         ddname = args[0].readCString();
-                    },
-                    onLeave(retval) {}
+                    }
                 });
                 Interceptor.attach(call_constructors_ptr, {
                     onEnter(args) {
@@ -60,13 +59,12 @@ class Helpers {
                             const ollcs = self.#ollcs;
                             let name = null;
                             let callback = null;
-                            for (const key of ollcs.keys()) {
+                            for (const key of ollcs.keys())
                                 if (ddname.includes(key)) {
                                     name = key;
                                     callback = ollcs.get(key);
                                     break;
                                 }
-                            }
                             if (name !== null && callback !== null) {
                                 const module = Process.findModuleByName(ddname);
                                 if (module !== null) {
@@ -78,8 +76,7 @@ class Helpers {
                                 }
                             }
                         }
-                    },
-                    onLeave(retval) {}
+                    }
                 });
                 Interceptor.flush();
             } else {
