@@ -147,7 +147,7 @@ class Helpers {
 
 const $Helpers = new Helpers();
 
-const library = "lib<whatever>.so";
+const library = "libarm.so";
 
 $Helpers.onLibraryLoad(library, function(module) {
     Interceptor.attach(Java.vm.getEnv().handle.readPointer().add(215 * Process.pointerSize).readPointer(), {
@@ -169,10 +169,10 @@ $Helpers.onLibraryLoad(library, function(module) {
                 const fnPtr = method.add(Process.pointerSize * 2).readPointer();
                 const offset = fnPtr.sub(module.base);
                 console.log(`[*] ${i}.
-                Method : ${methodName}
-                Signature : ${methodName}${signature}
-                FnPtr : ${fnPtr}
-                Offset : ${offset}
+Method : ${methodName}
+Signature : ${methodName}${signature}
+FnPtr : ${fnPtr}
+Offset : ${offset}
                 `);
             }
         }
