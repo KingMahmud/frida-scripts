@@ -1,4 +1,4 @@
-// Imprpoved by Mahmud. Thanks to the other scripts out there!
+// Improved by Mahmud. Thanks to the other scripts out there!
 // Helpers.js used.
 
 class Helpers {
