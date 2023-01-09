@@ -147,7 +147,7 @@ class Helpers {
 
 const $Helpers = new Helpers();
 
-const library = "libarm.so";
+const library = "lib<whatever>.so";
 
 $Helpers.onLibraryLoad(library, function(module) {
     Interceptor.attach(Java.vm.getEnv().handle.readPointer().add(215 * Process.pointerSize).readPointer(), {
