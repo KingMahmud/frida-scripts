@@ -1,0 +1,45 @@
+// Created by Mahmud.
+
+console.log(`[*] Original PID : ${Process.id}`);
+
+// pid_t getpid(void);
+const getpid = new NativeFunction(Module.findExportByName(null, "getpid"), "int", []);
+
+// pid_t getppid(void);
+const getppid = new NativeFunction(Module.findExportByName(null, "getppid"), "int", []);
+
+// int execve(const char *pathname, char *const argv[], char *const envp[]);
+Interceptor.attach(Module.findExportByName(null, "execve"), {
+    onEnter(args) {
+        console.log(`[*] execve(${args[0]}, ${args[1]}, ${args[2]})`);
+        console.log(`[*] Current PID : ${getpid()}`);
+        console.log(`[*] Parent PID : ${getppid()}`);
+        console.log(`[*] Path : ${args[0].readUtf8String()}`);
+        const argv = args[1];
+        let i = 0;
+        while (true) {
+            const each = argv.add(i * Process.pointerSize).readPointer().readUtf8String();
+            if (each !== null) {
+                console.log(`[*] argv[${i}] : ${each}`);
+                i++;
+            } else
+                break;
+        }
+        /*
+        const envp = args[2];
+        let j = 0;
+        while (true) {
+            const each = envp.add(j * Process.pointerSize).readPointer().readUtf8String();
+            if (each !== null) {
+                console.log(`[*] envp[${j}] : ${each}`);
+                j++;
+            } else
+                break;
+        }
+        */
+    },
+    onLeave(retval) {
+        console.log(`[*] return ${retval.toInt32()}`);
+        console.log(`[*] execve(...) => ${retval}`);
+    }
+});
