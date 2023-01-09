@@ -11,7 +11,7 @@ const getppid = new NativeFunction(Module.findExportByName(null, "getppid"), "in
 // int execve(const char *pathname, char *const argv[], char *const envp[]);
 Interceptor.attach(Module.findExportByName(null, "execve"), {
     onEnter(args) {
-        console.log(`[*] execve(${args[0]}, ${args[1]}, ${args[2]})`);
+        console.log(`[*] onEnter : execve(${args[0]}, ${args[1]}, ${args[2]})`);
         console.log(`[*] Current PID : ${getpid()}`);
         console.log(`[*] Parent PID : ${getppid()}`);
         console.log(`[*] Path : ${args[0].readUtf8String()}`);
@@ -37,9 +37,11 @@ Interceptor.attach(Module.findExportByName(null, "execve"), {
                 break;
         }
         */
+        console.log(`[*] Called from : 
+${Thread.backtrace(this.context).map(DebugSymbol.fromAddress).join("\n")}`);
     },
     onLeave(retval) {
         console.log(`[*] return ${retval.toInt32()}`);
-        console.log(`[*] execve(...) => ${retval}`);
+        console.log(`[*] onLeave : execve(...) => ${retval}`);
     }
 });
