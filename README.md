@@ -1,3 +1,6 @@
 # FridaScripts
 
-A few functional scripts, some i found in the internet, created util function and some created by me.
+Helpers.js => util
+execve.js => logs execve calls
+mbedtls_cipher.js => script related to https://github.com/Mbed-TLS/mbedtls
+registerNatives.js => reveals native methods registered with env->registerNatives()
