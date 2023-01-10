@@ -37,8 +37,7 @@ Interceptor.attach(Module.findExportByName(null, "execvpe"), {
                 break;
         }
         */
-        console.log(`[*] Called from : 
-${Thread.backtrace(this.context).map(DebugSymbol.fromAddress).join("\n")}`);
+        console.log(`[*] Called from : \n${Thread.backtrace(this.context).map(DebugSymbol.fromAddress).join("\n")}`);
     },
     onLeave(retval) {
         console.log(`[*] return ${retval.toInt32()}`);
