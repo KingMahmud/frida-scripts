@@ -18,23 +18,25 @@ Interceptor.attach(Module.findExportByName(null, "execve"), {
         const argv = args[1];
         let i = 0;
         while (true) {
-            const each = argv.add(i * Process.pointerSize).readPointer().readUtf8String();
-            if (each !== null) {
-                console.log(`[*] argv[${i}] : ${each}`);
-                i++;
-            } else
+            const each = argv.add(i * Process.pointerSize).readPointer();
+            if (each.isNull())
                 break;
+            else {
+                console.log(`[*] argv[${i}] : ${each.readUtf8String()}`);
+                i++;
+            }
         }
         /*
         const envp = args[2];
         let j = 0;
         while (true) {
-            const each = envp.add(j * Process.pointerSize).readPointer().readUtf8String();
-            if (each !== null) {
-                console.log(`[*] envp[${j}] : ${each}`);
-                j++;
-            } else
+            const each = envp.add(j * Process.pointerSize).readPointer();
+            if (each.isNull())
                 break;
+            else {
+                console.log(`[*] envp[${j}] : ${each.readUtf8String()}`);
+                j++;
+            }
         }
         */
         console.log(`[*] Called from : \n${Thread.backtrace(this.context).map(DebugSymbol.fromAddress).join("\n")}`);
