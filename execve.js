@@ -21,11 +21,10 @@ Interceptor.attach(Module.findExportByName(null, "execve"), {
             const each = argv.add(i * Process.pointerSize).readPointer();
             if (each.isNull())
                 break;
-            else {
-                console.log(`[*] argv[${i}] : ${each.readUtf8String()}`);
-                i++;
-            }
+            else
+                console.log(`[*] argv[${i++}] : ${each.readUtf8String()}`);
         }
+        // Remove comments if you need to log envp array too.
         /*
         const envp = args[2];
         let j = 0;
@@ -33,10 +32,8 @@ Interceptor.attach(Module.findExportByName(null, "execve"), {
             const each = envp.add(j * Process.pointerSize).readPointer();
             if (each.isNull())
                 break;
-            else {
-                console.log(`[*] envp[${j}] : ${each.readUtf8String()}`);
-                j++;
-            }
+            else
+                console.log(`[*] envp[${j++}] : ${each.readUtf8String()}`);
         }
         */
         console.log(`[*] Called from : \n${Thread.backtrace(this.context).map(DebugSymbol.fromAddress).join("\n")}`);
