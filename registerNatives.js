@@ -72,43 +72,43 @@ class Helpers {
         return array.filter(value => must_contain.every(str => value[property].includes(str)));
     }
 
-    getSpecificClassLoader(klass) {
+    getSpecificClassLoader(clazz) {
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
-                loader.findClass(klass);
+                loader.findClass(clazz);
                 return loader;
             } catch (e) {
                 // ignore and continue
                 continue;
             }
         }
-        throw new Error(`${klass} not found in any classloader`);
+        throw new Error(`${clazz} not found in any classloader`);
     }
 
-    getClassWrapper(klass) {
+    getClassWrapper(clazz) {
         const cache = this.#cache;
-        if (cache.has(klass))
-            return cache.get(klass);
+        if (cache.has(clazz))
+            return cache.get(clazz);
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
-                loader.findClass(klass);
-                const val = Java.ClassFactory.get(loader).use(klass);
-                cache.set(klass, val);
-                return val;
+                loader.findClass(clazz);
+                const wrapper = Java.ClassFactory.get(loader).use(clazz);
+                cache.set(clazz, wrapper);
+                return wrapper;
             } catch (e) {
                 // ignore and continue
                 continue;
             }
         }
-        throw new Error(`${klass} not found`);
+        throw new Error(`${clazz} not found`);
     }
 
-    getMethodWrapperExact(klass, name, paramTypes, returnType) {
+    getMethodWrapperExact(clazz, name, paramTypes, returnType) {
         const expectedParamTypesSignature = paramTypes.join(", ");
-        for (const overload of this.getClassWrapper(klass)[name].overloads)
+        for (const overload of this.getClassWrapper(clazz)[name].overloads)
             if (expectedParamTypesSignature === overload.argumentTypes.map(type => type.className).join(", ") && returnType === overload.returnType.className)
                 return overload;
-        throw new Error(`${klass}#${name}(${expectedParamTypesSignature})${returnType} not found`)
+        throw new Error(`${clazz}#${name}(${expectedParamTypesSignature})${returnType} not found`)
     }
 
     // I failed to name this function programatically (out of ideas).
