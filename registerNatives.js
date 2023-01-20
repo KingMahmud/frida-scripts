@@ -169,11 +169,10 @@ $Helpers.onLibraryLoad(library, function(module) {
                 const fnPtr = method.add(Process.pointerSize * 2).readPointer();
                 const offset = fnPtr.sub(module.base);
                 console.log(`[*] ${i + 1}.
-Method : ${methodName}
-Signature : ${methodName}${signature}
-FnPtr : ${fnPtr}
-Offset : ${offset}
-                `);
+[*] Method : ${methodName}
+[*] Signature : ${methodName}${signature}
+[*] FnPtr : ${fnPtr}
+[*] Offset : ${offset}`);
             }
         }
     });
