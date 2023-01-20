@@ -8,7 +8,7 @@ const getpid = new NativeFunction(Module.findExportByName(null, "getpid"), "int"
 // pid_t getppid(void);
 const getppid = new NativeFunction(Module.findExportByName(null, "getppid"), "int", []);
 
-// int execve(const char *pathname, char *const argv[], char *const envp[]);
+// int execve(const char *pathname, char *const argv[], char *const envp[])
 Interceptor.attach(Module.findExportByName(null, "execve"), {
     onEnter(args) {
         console.log(`[*] onEnter : execve(${args[0]}, ${args[1]}, ${args[2]})`);

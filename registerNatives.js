@@ -150,8 +150,8 @@ const $Helpers = new Helpers();
 const library = "lib<whatever>.so";
 
 $Helpers.onLibraryLoad(library, function(module) {
+    // jint RegisterNatives(JNIEnv *env, jclass clazz, const JNINativeMethod *methods, jint nMethods)
     Interceptor.attach(Java.vm.getEnv().handle.readPointer().add(215 * Process.pointerSize).readPointer(), {
-        // jint RegisterNatives(JNIEnv *env, jclass clazz, const JNINativeMethod *methods, jint nMethods);
         onEnter(args) {
             if (!DebugSymbol.fromAddress(this.returnAddress).toString().includes(library))
                 return;
@@ -168,7 +168,7 @@ $Helpers.onLibraryLoad(library, function(module) {
                 const signature = method.add(Process.pointerSize).readPointer().readCString();
                 const fnPtr = method.add(Process.pointerSize * 2).readPointer();
                 const offset = fnPtr.sub(module.base);
-                console.log(`[*] ${i}.
+                console.log(`[*] ${i + 1}.
 Method : ${methodName}
 Signature : ${methodName}${signature}
 FnPtr : ${fnPtr}
