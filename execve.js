@@ -3,13 +3,13 @@
 console.log(`[*] Original PID : ${Process.id}`);
 
 // pid_t getpid(void);
-const getpid = new NativeFunction(Module.findExportByName(null, "getpid"), "int", []);
+const getpid = new NativeFunction(Module.getExportByName("libc.so", "getpid"), "int", []);
 
 // pid_t getppid(void);
-const getppid = new NativeFunction(Module.findExportByName(null, "getppid"), "int", []);
+const getppid = new NativeFunction(Module.getExportByName("libc.so", "getppid"), "int", []);
 
 // int execve(const char *pathname, char *const argv[], char *const envp[])
-Interceptor.attach(Module.findExportByName(null, "execve"), {
+Interceptor.attach(Module.getExportByName("libc.so", "execve"), {
     onEnter(args) {
         console.log(`[*] onEnter : execve(${args[0]}, ${args[1]}, ${args[2]})`);
         console.log(`[*] Current PID : ${getpid()}`);

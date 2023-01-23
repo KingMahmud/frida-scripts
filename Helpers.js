@@ -24,12 +24,12 @@ class Helpers {
 
     #cache = new Map();
 
-    #ollcs = new Map();
+    #callbacks = new Map();
 
     constructor() {
         // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://github.com/FrenchYeti/interruptor)
         const self = this;
-        const linker = Process.findModuleByName(Process.arch.includes("64") ? "linker64" : "linker");
+        const linker = Process.getModuleByName(Process.arch.includes("64") ? "linker64" : "linker");
         if (linker !== null) {
             // https://android.googlesource.com/platform/bionic/+/master/linker/linker.cpp
             // void* do_dlopen(const char* name, int flags, const android_dlextinfo* extinfo, const void* caller_addr)
@@ -37,44 +37,41 @@ class Helpers {
             // https://android.googlesource.com/platform/bionic/+/master/linker/linker_soinfo.cpp
             // void soinfo::call_constructors()
             let call_constructors_ptr = null;
-            for (const sym of linker.enumerateSymbols()) {
-                const name = sym.name;
+            for (const symbol of linker.enumerateSymbols()) {
+                const name = symbol.name;
                 if (name.includes("do_dlopen"))
-                    do_dlopen_ptr = sym.address;
+                    do_dlopen_ptr = symbol.address;
                 else if (name.includes("call_constructors"))
-                    call_constructors_ptr = sym.address;
+                    call_constructors_ptr = symbol.address;
                 if (do_dlopen_ptr !== null && call_constructors_ptr !== null)
                     break;
             }
             if (do_dlopen_ptr !== null && call_constructors_ptr !== null) {
-                let ddname = null;
+                let path = null;
                 Interceptor.attach(do_dlopen_ptr, {
                     onEnter(args) {
-                        ddname = args[0].readCString();
+                        path = args[0].readUtf8String();
                     }
                 });
                 Interceptor.attach(call_constructors_ptr, {
                     onEnter(args) {
-                        if (ddname !== null) {
-                            const ollcs = self.#ollcs;
-                            let name = null;
-                            let callback = null;
-                            for (const key of ollcs.keys())
-                                if (ddname.includes(key)) {
-                                    name = key;
-                                    callback = ollcs.get(key);
+                        if (path !== null) {
+                            const callbacks = self.#callbacks;
+                            for (const key of callbacks.keys())
+                                if (path.includes(key)) {
+                                    const module = Process.findModuleByName(path);
+                                    if (module !== null) {
+                                        console.log(`[*] Library loaded : ${key}`);
+                                        try {
+                                            callbacks.get(key)(module);
+                                        } catch (e) {
+                                            console.error(e);
+                                        }
+                                        callbacks.delete(key);
+                                    }
                                     break;
                                 }
-                            if (name !== null && callback !== null) {
-                                const module = Process.findModuleByName(ddname);
-                                if (module !== null) {
-                                    console.log(`[*] Library loaded : ${name}`);
-                                    callback(module);
-                                    // Nullify after callback has been called to avoid weird behaviors
-                                    ddname = null;
-                                    ollcs.delete(name);
-                                }
-                            }
+                            path = null;
                         }
                     }
                 });
@@ -140,28 +137,10 @@ class Helpers {
     }
 
     onLibraryLoad(name, callback) {
-        this.#ollcs.set(name, callback);
+        if (callback !== undefined || callback !== null)
+            throw new Error(`No callback specified for ${name}`);
+        this.#callbacks.set(name, callback);
     }
-
-    // Old implementation
-    /*
-    onLibraryLoad(name, callback) {
-        Interceptor.attach(Module.findExportByName(null, "android_dlopen_ext"), {
-            onEnter(args) {
-                let path = args[0].readCString();
-                if (path.includes(name)) 
-                    this.loaded = true;
-            },
-            onLeave(retval) {
-                if (this.loaded) {
-                    console.log(`[*] Library loaded : ${name}`);
-                    callback(Process.findModuleByName(name));
-                }
-            }
-        });
-        Interceptor.flush();
-    }
-    */
 }
 
 // const helpers = new Helpers();
