@@ -13,7 +13,7 @@ class Helpers {
     constructor() {
         // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://github.com/FrenchYeti/interruptor)
         const self = this;
-        const linker = Process.getModuleByName(Process.arch.includes("64") ? "linker64" : "linker");
+        const linker = Process.findModuleByName(Process.arch.includes("64") ? "linker64" : "linker");
         if (linker !== null) {
             // https://android.googlesource.com/platform/bionic/+/master/linker/linker.cpp
             // void* do_dlopen(const char* name, int flags, const android_dlextinfo* extinfo, const void* caller_addr)
