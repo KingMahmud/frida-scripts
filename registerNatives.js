@@ -118,7 +118,7 @@ class Helpers {
     }
 
     onLibraryLoad(name, callback) {
-        if (callback !== undefined || callback !== null)
+        if (callback === undefined || callback === null)
             throw new Error(`No callback specified for ${name}`);
         this.#callbacks.set(name, callback);
     }
