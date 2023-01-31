@@ -91,7 +91,7 @@ class Helpers {
     getSpecificClassLoader(clazz) {
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
-                loader.findClass(clazz);
+                loader.loadClass(clazz, false);
                 return loader;
             } catch (e) {
                 // ignore and continue
@@ -107,7 +107,7 @@ class Helpers {
             return cache.get(clazz);
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
-                loader.findClass(clazz);
+                loader.loadClass(clazz, false);
                 const wrapper = Java.ClassFactory.get(loader).use(clazz);
                 cache.set(clazz, wrapper);
                 return wrapper;
