@@ -3,11 +3,13 @@
 
 class Helpers {
 
-    #cache = new Map();
+    static #cache = new Map();
 
-    #callbacks = new Map();
+    static #callbacks = new Map();
 
-    constructor() {
+    static #initialize = this.initializer();
+
+    static initializer() {
         // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://github.com/FrenchYeti/interruptor)
         const self = this;
         const linker = Process.findModuleByName(Process.arch.includes("64") ? "linker64" : "linker");
@@ -65,11 +67,11 @@ class Helpers {
             console.error("[*] Failed to find linker");
     }
 
-    getMatched(array, property, must_contain) {
+    static getMatched(array, property, must_contain) {
         return array.filter(value => must_contain.every(str => value[property].includes(str)));
     }
 
-    getSpecificClassLoader(clazz) {
+    static getSpecificClassLoader(clazz) {
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
                 loader.loadClass(clazz, false);
@@ -82,7 +84,7 @@ class Helpers {
         throw new Error(`${clazz} not found in any classloader`);
     }
 
-    getClassWrapper(clazz) {
+    static getClassWrapper(clazz) {
         const cache = this.#cache;
         if (cache.has(clazz))
             return cache.get(clazz);
@@ -100,7 +102,7 @@ class Helpers {
         throw new Error(`${clazz} not found`);
     }
 
-    getMethodWrapperExact(clazz, name, paramTypes, returnType) {
+    static getMethodWrapperExact(clazz, name, paramTypes, returnType) {
         const expectedParamTypesSignature = paramTypes.join(", ");
         for (const overload of this.getClassWrapper(clazz)[name].overloads)
             if (expectedParamTypesSignature === overload.argumentTypes.map(type => type.className).join(", ") && returnType === overload.returnType.className)
@@ -109,7 +111,7 @@ class Helpers {
     }
 
     // I failed to name this function programatically (out of ideas).
-    magic(func, callback) {
+    static magic(func, callback) {
         let val;
         func(function() {
             val = callback.apply(this, arguments);
@@ -117,18 +119,15 @@ class Helpers {
         return val;
     }
 
-    onLibraryLoad(name, callback) {
+    static onLibraryLoad(name, callback) {
         if (callback === undefined || callback === null)
             throw new Error(`No callback specified for ${name}`);
         this.#callbacks.set(name, callback);
     }
 }
 
-const $Helpers = new Helpers();
-
 const library = "lib<whatever>.so";
-
-$Helpers.onLibraryLoad(library, function(module) {
+Helpers.onLibraryLoad(library, function(module) {
     // jint RegisterNatives(JNIEnv *env, jclass clazz, const JNINativeMethod *methods, jint nMethods)
     Interceptor.attach(Java.vm.getEnv().handle.readPointer().add(215 * Process.pointerSize).readPointer(), {
         onEnter(args) {

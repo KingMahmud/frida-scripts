@@ -6,11 +6,13 @@
 
 class Helpers {
 
-    #cache = new Map();
+    static #cache = new Map();
 
-    #callbacks = new Map();
+    static #callbacks = new Map();
 
-    constructor() {
+    static #initialize = this.initializer();
+
+    static initializer() {
         // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://github.com/FrenchYeti/interruptor)
         const self = this;
         const linker = Process.findModuleByName(Process.arch.includes("64") ? "linker64" : "linker");
@@ -68,11 +70,11 @@ class Helpers {
             console.error("[*] Failed to find linker");
     }
 
-    getMatched(array, property, must_contain) {
+    static getMatched(array, property, must_contain) {
         return array.filter(value => must_contain.every(str => value[property].includes(str)));
     }
 
-    getSpecificClassLoader(clazz) {
+    static getSpecificClassLoader(clazz) {
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
                 loader.loadClass(clazz, false);
@@ -85,7 +87,7 @@ class Helpers {
         throw new Error(`${clazz} not found in any classloader`);
     }
 
-    getClassWrapper(clazz) {
+    static getClassWrapper(clazz) {
         const cache = this.#cache;
         if (cache.has(clazz))
             return cache.get(clazz);
@@ -103,7 +105,7 @@ class Helpers {
         throw new Error(`${clazz} not found`);
     }
 
-    getMethodWrapperExact(clazz, name, paramTypes, returnType) {
+    static getMethodWrapperExact(clazz, name, paramTypes, returnType) {
         const expectedParamTypesSignature = paramTypes.join(", ");
         for (const overload of this.getClassWrapper(clazz)[name].overloads)
             if (expectedParamTypesSignature === overload.argumentTypes.map(type => type.className).join(", ") && returnType === overload.returnType.className)
@@ -112,7 +114,7 @@ class Helpers {
     }
 
     // I failed to name this function programatically (out of ideas).
-    magic(func, callback) {
+    static magic(func, callback) {
         let val;
         func(function() {
             val = callback.apply(this, arguments);
@@ -120,107 +122,103 @@ class Helpers {
         return val;
     }
 
-    onLibraryLoad(name, callback) {
+    static onLibraryLoad(name, callback) {
         if (callback === undefined || callback === null)
             throw new Error(`No callback specified for ${name}`);
         this.#callbacks.set(name, callback);
     }
 }
 
-const $Helpers = new Helpers();
-
 const name = "lib<whatever>.so";
-
-$Helpers.onLibraryLoad(name, function(module) {
-
+Helpers.onLibraryLoad(name, function(module) {
     /*
-    typedef enum {
-        MBEDTLS_CIPHER_NONE = 0,              Placeholder to mark the end of cipher-pair lists. 
-        MBEDTLS_CIPHER_NULL,                  The identity stream cipher. 
-        MBEDTLS_CIPHER_AES_128_ECB,           AES cipher with 128-bit ECB mode. 
-        MBEDTLS_CIPHER_AES_192_ECB,           AES cipher with 192-bit ECB mode. 
-        MBEDTLS_CIPHER_AES_256_ECB,           AES cipher with 256-bit ECB mode. 
-        MBEDTLS_CIPHER_AES_128_CBC,           AES cipher with 128-bit CBC mode. 
-        MBEDTLS_CIPHER_AES_192_CBC,           AES cipher with 192-bit CBC mode. 
-        MBEDTLS_CIPHER_AES_256_CBC,           AES cipher with 256-bit CBC mode. 
-        MBEDTLS_CIPHER_AES_128_CFB128,        AES cipher with 128-bit CFB128 mode. 
-        MBEDTLS_CIPHER_AES_192_CFB128,        AES cipher with 192-bit CFB128 mode. 
-        MBEDTLS_CIPHER_AES_256_CFB128,        AES cipher with 256-bit CFB128 mode. 
-        MBEDTLS_CIPHER_AES_128_CTR,           AES cipher with 128-bit CTR mode. 
-        MBEDTLS_CIPHER_AES_192_CTR,           AES cipher with 192-bit CTR mode. 
-        MBEDTLS_CIPHER_AES_256_CTR,           AES cipher with 256-bit CTR mode. 
-        MBEDTLS_CIPHER_AES_128_GCM,           AES cipher with 128-bit GCM mode. 
-        MBEDTLS_CIPHER_AES_192_GCM,           AES cipher with 192-bit GCM mode. 
-        MBEDTLS_CIPHER_AES_256_GCM,           AES cipher with 256-bit GCM mode. 
-        MBEDTLS_CIPHER_CAMELLIA_128_ECB,      Camellia cipher with 128-bit ECB mode. 
-        MBEDTLS_CIPHER_CAMELLIA_192_ECB,      Camellia cipher with 192-bit ECB mode. 
-        MBEDTLS_CIPHER_CAMELLIA_256_ECB,      Camellia cipher with 256-bit ECB mode. 
-        MBEDTLS_CIPHER_CAMELLIA_128_CBC,      Camellia cipher with 128-bit CBC mode. 
-        MBEDTLS_CIPHER_CAMELLIA_192_CBC,      Camellia cipher with 192-bit CBC mode. 
-        MBEDTLS_CIPHER_CAMELLIA_256_CBC,      Camellia cipher with 256-bit CBC mode. 
-        MBEDTLS_CIPHER_CAMELLIA_128_CFB128,   Camellia cipher with 128-bit CFB128 mode. 
-        MBEDTLS_CIPHER_CAMELLIA_192_CFB128,   Camellia cipher with 192-bit CFB128 mode. 
-        MBEDTLS_CIPHER_CAMELLIA_256_CFB128,   Camellia cipher with 256-bit CFB128 mode. 
-        MBEDTLS_CIPHER_CAMELLIA_128_CTR,      Camellia cipher with 128-bit CTR mode. 
-        MBEDTLS_CIPHER_CAMELLIA_192_CTR,      Camellia cipher with 192-bit CTR mode. 
-        MBEDTLS_CIPHER_CAMELLIA_256_CTR,      Camellia cipher with 256-bit CTR mode. 
-        MBEDTLS_CIPHER_CAMELLIA_128_GCM,      Camellia cipher with 128-bit GCM mode. 
-        MBEDTLS_CIPHER_CAMELLIA_192_GCM,      Camellia cipher with 192-bit GCM mode. 
-        MBEDTLS_CIPHER_CAMELLIA_256_GCM,      Camellia cipher with 256-bit GCM mode. 
-        MBEDTLS_CIPHER_DES_ECB,               DES cipher with ECB mode. 
-        MBEDTLS_CIPHER_DES_CBC,               DES cipher with CBC mode. 
-        MBEDTLS_CIPHER_DES_EDE_ECB,           DES cipher with EDE ECB mode. 
-        MBEDTLS_CIPHER_DES_EDE_CBC,           DES cipher with EDE CBC mode. 
-        MBEDTLS_CIPHER_DES_EDE3_ECB,          DES cipher with EDE3 ECB mode. 
-        MBEDTLS_CIPHER_DES_EDE3_CBC,          DES cipher with EDE3 CBC mode. 
-        MBEDTLS_CIPHER_AES_128_CCM,           AES cipher with 128-bit CCM mode. 
-        MBEDTLS_CIPHER_AES_192_CCM,           AES cipher with 192-bit CCM mode. 
-        MBEDTLS_CIPHER_AES_256_CCM,           AES cipher with 256-bit CCM mode. 
-        MBEDTLS_CIPHER_AES_128_CCM_STAR_NO_TAG,  AES cipher with 128-bit CCM_STAR_NO_TAG mode. 
-        MBEDTLS_CIPHER_AES_192_CCM_STAR_NO_TAG,  AES cipher with 192-bit CCM_STAR_NO_TAG mode. 
-        MBEDTLS_CIPHER_AES_256_CCM_STAR_NO_TAG,  AES cipher with 256-bit CCM_STAR_NO_TAG mode. 
-        MBEDTLS_CIPHER_CAMELLIA_128_CCM,      Camellia cipher with 128-bit CCM mode. 
-        MBEDTLS_CIPHER_CAMELLIA_192_CCM,      Camellia cipher with 192-bit CCM mode. 
-        MBEDTLS_CIPHER_CAMELLIA_256_CCM,      Camellia cipher with 256-bit CCM mode. 
-        MBEDTLS_CIPHER_CAMELLIA_128_CCM_STAR_NO_TAG,  Camellia cipher with 128-bit CCM_STAR_NO_TAG mode. 
-        MBEDTLS_CIPHER_CAMELLIA_192_CCM_STAR_NO_TAG,  Camellia cipher with 192-bit CCM_STAR_NO_TAG mode. 
-        MBEDTLS_CIPHER_CAMELLIA_256_CCM_STAR_NO_TAG,  Camellia cipher with 256-bit CCM_STAR_NO_TAG mode. 
-        MBEDTLS_CIPHER_ARIA_128_ECB,          Aria cipher with 128-bit key and ECB mode. 
-        MBEDTLS_CIPHER_ARIA_192_ECB,          Aria cipher with 192-bit key and ECB mode. 
-        MBEDTLS_CIPHER_ARIA_256_ECB,          Aria cipher with 256-bit key and ECB mode. 
-        MBEDTLS_CIPHER_ARIA_128_CBC,          Aria cipher with 128-bit key and CBC mode. 
-        MBEDTLS_CIPHER_ARIA_192_CBC,          Aria cipher with 192-bit key and CBC mode. 
-        MBEDTLS_CIPHER_ARIA_256_CBC,          Aria cipher with 256-bit key and CBC mode. 
-        MBEDTLS_CIPHER_ARIA_128_CFB128,       Aria cipher with 128-bit key and CFB-128 mode. 
-        MBEDTLS_CIPHER_ARIA_192_CFB128,       Aria cipher with 192-bit key and CFB-128 mode. 
-        MBEDTLS_CIPHER_ARIA_256_CFB128,       Aria cipher with 256-bit key and CFB-128 mode. 
-        MBEDTLS_CIPHER_ARIA_128_CTR,          Aria cipher with 128-bit key and CTR mode. 
-        MBEDTLS_CIPHER_ARIA_192_CTR,          Aria cipher with 192-bit key and CTR mode. 
-        MBEDTLS_CIPHER_ARIA_256_CTR,          Aria cipher with 256-bit key and CTR mode. 
-        MBEDTLS_CIPHER_ARIA_128_GCM,          Aria cipher with 128-bit key and GCM mode. 
-        MBEDTLS_CIPHER_ARIA_192_GCM,          Aria cipher with 192-bit key and GCM mode. 
-        MBEDTLS_CIPHER_ARIA_256_GCM,          Aria cipher with 256-bit key and GCM mode. 
-        MBEDTLS_CIPHER_ARIA_128_CCM,          Aria cipher with 128-bit key and CCM mode. 
-        MBEDTLS_CIPHER_ARIA_192_CCM,          Aria cipher with 192-bit key and CCM mode. 
-        MBEDTLS_CIPHER_ARIA_256_CCM,          Aria cipher with 256-bit key and CCM mode. 
-        MBEDTLS_CIPHER_ARIA_128_CCM_STAR_NO_TAG,  Aria cipher with 128-bit key and CCM_STAR_NO_TAG mode. 
-        MBEDTLS_CIPHER_ARIA_192_CCM_STAR_NO_TAG,  Aria cipher with 192-bit key and CCM_STAR_NO_TAG mode. 
-        MBEDTLS_CIPHER_ARIA_256_CCM_STAR_NO_TAG,  Aria cipher with 256-bit key and CCM_STAR_NO_TAG mode. 
-        MBEDTLS_CIPHER_AES_128_OFB,           AES 128-bit cipher in OFB mode. 
-        MBEDTLS_CIPHER_AES_192_OFB,           AES 192-bit cipher in OFB mode. 
-        MBEDTLS_CIPHER_AES_256_OFB,           AES 256-bit cipher in OFB mode. 
-        MBEDTLS_CIPHER_AES_128_XTS,           AES 128-bit cipher in XTS block mode. 
-        MBEDTLS_CIPHER_AES_256_XTS,           AES 256-bit cipher in XTS block mode. 
-        MBEDTLS_CIPHER_CHACHA20,              ChaCha20 stream cipher. 
-        MBEDTLS_CIPHER_CHACHA20_POLY1305,     ChaCha20-Poly1305 AEAD cipher. 
-        MBEDTLS_CIPHER_AES_128_KW,            AES cipher with 128-bit NIST KW mode. 
-        MBEDTLS_CIPHER_AES_192_KW,            AES cipher with 192-bit NIST KW mode. 
-        MBEDTLS_CIPHER_AES_256_KW,            AES cipher with 256-bit NIST KW mode. 
-        MBEDTLS_CIPHER_AES_128_KWP,           AES cipher with 128-bit NIST KWP mode. 
-        MBEDTLS_CIPHER_AES_192_KWP,           AES cipher with 192-bit NIST KWP mode. 
-        MBEDTLS_CIPHER_AES_256_KWP,           AES cipher with 256-bit NIST KWP mode.
-    } mbedtls_cipher_type_t;
-    */
+     * typedef enum {
+     *     MBEDTLS_CIPHER_NONE = 0,              Placeholder to mark the end of cipher-pair lists. 
+     *     MBEDTLS_CIPHER_NULL,                  The identity stream cipher. 
+     *     MBEDTLS_CIPHER_AES_128_ECB,           AES cipher with 128-bit ECB mode. 
+     *     MBEDTLS_CIPHER_AES_192_ECB,           AES cipher with 192-bit ECB mode. 
+     *     MBEDTLS_CIPHER_AES_256_ECB,           AES cipher with 256-bit ECB mode. 
+     *     MBEDTLS_CIPHER_AES_128_CBC,           AES cipher with 128-bit CBC mode. 
+     *     MBEDTLS_CIPHER_AES_192_CBC,           AES cipher with 192-bit CBC mode. 
+     *     MBEDTLS_CIPHER_AES_256_CBC,           AES cipher with 256-bit CBC mode. 
+     *     MBEDTLS_CIPHER_AES_128_CFB128,        AES cipher with 128-bit CFB128 mode. 
+     *     MBEDTLS_CIPHER_AES_192_CFB128,        AES cipher with 192-bit CFB128 mode. 
+     *     MBEDTLS_CIPHER_AES_256_CFB128,        AES cipher with 256-bit CFB128 mode. 
+     *     MBEDTLS_CIPHER_AES_128_CTR,           AES cipher with 128-bit CTR mode. 
+     *     MBEDTLS_CIPHER_AES_192_CTR,           AES cipher with 192-bit CTR mode. 
+     *     MBEDTLS_CIPHER_AES_256_CTR,           AES cipher with 256-bit CTR mode. 
+     *     MBEDTLS_CIPHER_AES_128_GCM,           AES cipher with 128-bit GCM mode. 
+     *     MBEDTLS_CIPHER_AES_192_GCM,           AES cipher with 192-bit GCM mode. 
+     *     MBEDTLS_CIPHER_AES_256_GCM,           AES cipher with 256-bit GCM mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_128_ECB,      Camellia cipher with 128-bit ECB mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_192_ECB,      Camellia cipher with 192-bit ECB mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_256_ECB,      Camellia cipher with 256-bit ECB mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_128_CBC,      Camellia cipher with 128-bit CBC mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_192_CBC,      Camellia cipher with 192-bit CBC mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_256_CBC,      Camellia cipher with 256-bit CBC mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_128_CFB128,   Camellia cipher with 128-bit CFB128 mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_192_CFB128,   Camellia cipher with 192-bit CFB128 mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_256_CFB128,   Camellia cipher with 256-bit CFB128 mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_128_CTR,      Camellia cipher with 128-bit CTR mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_192_CTR,      Camellia cipher with 192-bit CTR mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_256_CTR,      Camellia cipher with 256-bit CTR mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_128_GCM,      Camellia cipher with 128-bit GCM mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_192_GCM,      Camellia cipher with 192-bit GCM mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_256_GCM,      Camellia cipher with 256-bit GCM mode. 
+     *     MBEDTLS_CIPHER_DES_ECB,               DES cipher with ECB mode. 
+     *     MBEDTLS_CIPHER_DES_CBC,               DES cipher with CBC mode. 
+     *     MBEDTLS_CIPHER_DES_EDE_ECB,           DES cipher with EDE ECB mode. 
+     *     MBEDTLS_CIPHER_DES_EDE_CBC,           DES cipher with EDE CBC mode. 
+     *     MBEDTLS_CIPHER_DES_EDE3_ECB,          DES cipher with EDE3 ECB mode. 
+     *     MBEDTLS_CIPHER_DES_EDE3_CBC,          DES cipher with EDE3 CBC mode. 
+     *     MBEDTLS_CIPHER_AES_128_CCM,           AES cipher with 128-bit CCM mode. 
+     *     MBEDTLS_CIPHER_AES_192_CCM,           AES cipher with 192-bit CCM mode. 
+     *     MBEDTLS_CIPHER_AES_256_CCM,           AES cipher with 256-bit CCM mode. 
+     *     MBEDTLS_CIPHER_AES_128_CCM_STAR_NO_TAG,  AES cipher with 128-bit CCM_STAR_NO_TAG mode. 
+     *     MBEDTLS_CIPHER_AES_192_CCM_STAR_NO_TAG,  AES cipher with 192-bit CCM_STAR_NO_TAG mode. 
+     *     MBEDTLS_CIPHER_AES_256_CCM_STAR_NO_TAG,  AES cipher with 256-bit CCM_STAR_NO_TAG mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_128_CCM,      Camellia cipher with 128-bit CCM mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_192_CCM,      Camellia cipher with 192-bit CCM mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_256_CCM,      Camellia cipher with 256-bit CCM mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_128_CCM_STAR_NO_TAG,  Camellia cipher with 128-bit CCM_STAR_NO_TAG mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_192_CCM_STAR_NO_TAG,  Camellia cipher with 192-bit CCM_STAR_NO_TAG mode. 
+     *     MBEDTLS_CIPHER_CAMELLIA_256_CCM_STAR_NO_TAG,  Camellia cipher with 256-bit CCM_STAR_NO_TAG mode. 
+     *     MBEDTLS_CIPHER_ARIA_128_ECB,          Aria cipher with 128-bit key and ECB mode. 
+     *     MBEDTLS_CIPHER_ARIA_192_ECB,          Aria cipher with 192-bit key and ECB mode. 
+     *     MBEDTLS_CIPHER_ARIA_256_ECB,          Aria cipher with 256-bit key and ECB mode. 
+     *     MBEDTLS_CIPHER_ARIA_128_CBC,          Aria cipher with 128-bit key and CBC mode. 
+     *     MBEDTLS_CIPHER_ARIA_192_CBC,          Aria cipher with 192-bit key and CBC mode. 
+     *     MBEDTLS_CIPHER_ARIA_256_CBC,          Aria cipher with 256-bit key and CBC mode. 
+     *     MBEDTLS_CIPHER_ARIA_128_CFB128,       Aria cipher with 128-bit key and CFB-128 mode. 
+     *     MBEDTLS_CIPHER_ARIA_192_CFB128,       Aria cipher with 192-bit key and CFB-128 mode. 
+     *     MBEDTLS_CIPHER_ARIA_256_CFB128,       Aria cipher with 256-bit key and CFB-128 mode. 
+     *     MBEDTLS_CIPHER_ARIA_128_CTR,          Aria cipher with 128-bit key and CTR mode. 
+     *     MBEDTLS_CIPHER_ARIA_192_CTR,          Aria cipher with 192-bit key and CTR mode. 
+     *     MBEDTLS_CIPHER_ARIA_256_CTR,          Aria cipher with 256-bit key and CTR mode. 
+     *     MBEDTLS_CIPHER_ARIA_128_GCM,          Aria cipher with 128-bit key and GCM mode. 
+     *     MBEDTLS_CIPHER_ARIA_192_GCM,          Aria cipher with 192-bit key and GCM mode. 
+     *     MBEDTLS_CIPHER_ARIA_256_GCM,          Aria cipher with 256-bit key and GCM mode. 
+     *     MBEDTLS_CIPHER_ARIA_128_CCM,          Aria cipher with 128-bit key and CCM mode. 
+     *     MBEDTLS_CIPHER_ARIA_192_CCM,          Aria cipher with 192-bit key and CCM mode. 
+     *     MBEDTLS_CIPHER_ARIA_256_CCM,          Aria cipher with 256-bit key and CCM mode. 
+     *     MBEDTLS_CIPHER_ARIA_128_CCM_STAR_NO_TAG,  Aria cipher with 128-bit key and CCM_STAR_NO_TAG mode. 
+     *     MBEDTLS_CIPHER_ARIA_192_CCM_STAR_NO_TAG,  Aria cipher with 192-bit key and CCM_STAR_NO_TAG mode. 
+     *     MBEDTLS_CIPHER_ARIA_256_CCM_STAR_NO_TAG,  Aria cipher with 256-bit key and CCM_STAR_NO_TAG mode. 
+     *     MBEDTLS_CIPHER_AES_128_OFB,           AES 128-bit cipher in OFB mode. 
+     *     MBEDTLS_CIPHER_AES_192_OFB,           AES 192-bit cipher in OFB mode. 
+     *     MBEDTLS_CIPHER_AES_256_OFB,           AES 256-bit cipher in OFB mode. 
+     *     MBEDTLS_CIPHER_AES_128_XTS,           AES 128-bit cipher in XTS block mode. 
+     *     MBEDTLS_CIPHER_AES_256_XTS,           AES 256-bit cipher in XTS block mode. 
+     *     MBEDTLS_CIPHER_CHACHA20,              ChaCha20 stream cipher. 
+     *     MBEDTLS_CIPHER_CHACHA20_POLY1305,     ChaCha20-Poly1305 AEAD cipher. 
+     *     MBEDTLS_CIPHER_AES_128_KW,            AES cipher with 128-bit NIST KW mode. 
+     *     MBEDTLS_CIPHER_AES_192_KW,            AES cipher with 192-bit NIST KW mode. 
+     *     MBEDTLS_CIPHER_AES_256_KW,            AES cipher with 256-bit NIST KW mode. 
+     *     MBEDTLS_CIPHER_AES_128_KWP,           AES cipher with 128-bit NIST KWP mode. 
+     *     MBEDTLS_CIPHER_AES_192_KWP,           AES cipher with 192-bit NIST KWP mode. 
+     *     MBEDTLS_CIPHER_AES_256_KWP,           AES cipher with 256-bit NIST KWP mode.
+     * } mbedtls_cipher_type_t;
+     */
 
     // const mbedtls_cipher_info_t *mbedtls_cipher_info_from_type(const mbedtls_cipher_type_t cipher_type)
     Interceptor.attach(module.getExportByName("mbedtls_cipher_info_from_type"), {
@@ -245,12 +243,12 @@ $Helpers.onLibraryLoad(name, function(module) {
     });
 
     /*
-    typedef enum {
-        MBEDTLS_OPERATION_NONE = -1,
-        MBEDTLS_DECRYPT = 0,
-        MBEDTLS_ENCRYPT,
-    } mbedtls_operation_t;
-    */
+     * typedef enum {
+     *     MBEDTLS_OPERATION_NONE = -1,
+     *     MBEDTLS_DECRYPT = 0,
+     *     MBEDTLS_ENCRYPT,
+     * } mbedtls_operation_t;
+     */
 
     // int mbedtls_cipher_setkey(mbedtls_cipher_context_t *ctx, const unsigned char *key, int key_bitlen, const mbedtls_operation_t operation)
     Interceptor.attach(module.getExportByName("mbedtls_cipher_setkey"), {
@@ -267,14 +265,14 @@ $Helpers.onLibraryLoad(name, function(module) {
     });
 
     /*
-    typedef enum {
-        MBEDTLS_PADDING_PKCS7 = 0,     /**< PKCS7 padding (default).        
-        MBEDTLS_PADDING_ONE_AND_ZEROS, /**< ISO/IEC 7816-4 padding.         
-        MBEDTLS_PADDING_ZEROS_AND_LEN, /**< ANSI X.923 padding.             
-        MBEDTLS_PADDING_ZEROS,         /**< Zero padding (not reversible). 
-        MBEDTLS_PADDING_NONE,          /**< Never pad (full blocks only).   
-    } mbedtls_cipher_padding_t;
-    */
+     * typedef enum {
+     *     MBEDTLS_PADDING_PKCS7 = 0,     /**< PKCS7 padding (default).        
+     *     MBEDTLS_PADDING_ONE_AND_ZEROS, /**< ISO/IEC 7816-4 padding.         
+     *     MBEDTLS_PADDING_ZEROS_AND_LEN, /**< ANSI X.923 padding.             
+     *     MBEDTLS_PADDING_ZEROS,         /**< Zero padding (not reversible). 
+     *     MBEDTLS_PADDING_NONE,          /**< Never pad (full blocks only).   
+     * } mbedtls_cipher_padding_t;
+     */
 
     // int mbedtls_cipher_set_padding_mode(mbedtls_cipher_context_t *ctx, mbedtls_cipher_padding_t mode)
     Interceptor.attach(module.getExportByName("mbedtls_cipher_set_padding_mode"), {

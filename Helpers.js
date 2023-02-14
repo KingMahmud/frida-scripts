@@ -1,32 +1,26 @@
 // Created by Mahmud.
 
 /*
-
-Usage : copy paste into your script, create Helper instance then access the functions..
-
-Example of another util created using getMatched
-
-function getMatchedSymbols(library_name, must_contain) {
-    return _Helpers.getMatched(Process.getModuleByName(library_name).enumerateSymbols(), "name", must_contain);
-}
-
-Example of using onLibraryLoad
-
-const _Helpers = new Helpers();
-
-_Helpers.onLibraryLoad("libnative.so", function(module){
-// module = frida module object for that library
-});
-
-*/
+ * Usage : copy paste into your script, create Helper instance then access the functions..
+ * Example of another util created using getMatched
+ * function getMatchedSymbols(library_name, must_contain) {
+ *    return Helpers.getMatched(Process.getModuleByName(library_name).enumerateSymbols(), "name", must_contain);
+ * }
+ * Example of using onLibraryLoad
+ * Helpers.onLibraryLoad("libnative.so", function(module) {
+ *     // module = frida module object for that library
+ * });
+ */
 
 class Helpers {
 
-    #cache = new Map();
+    static #cache = new Map();
 
-    #callbacks = new Map();
+    static #callbacks = new Map();
 
-    constructor() {
+    static #initialize = this.initializer();
+
+    static initializer() {
         // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://github.com/FrenchYeti/interruptor)
         const self = this;
         const linker = Process.findModuleByName(Process.arch.includes("64") ? "linker64" : "linker");
@@ -84,11 +78,11 @@ class Helpers {
             console.error("[*] Failed to find linker");
     }
 
-    getMatched(array, property, must_contain) {
+    static getMatched(array, property, must_contain) {
         return array.filter(value => must_contain.every(str => value[property].includes(str)));
     }
 
-    getSpecificClassLoader(clazz) {
+    static getSpecificClassLoader(clazz) {
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
                 loader.loadClass(clazz, false);
@@ -101,7 +95,7 @@ class Helpers {
         throw new Error(`${clazz} not found in any classloader`);
     }
 
-    getClassWrapper(clazz) {
+    static getClassWrapper(clazz) {
         const cache = this.#cache;
         if (cache.has(clazz))
             return cache.get(clazz);
@@ -119,7 +113,7 @@ class Helpers {
         throw new Error(`${clazz} not found`);
     }
 
-    getMethodWrapperExact(clazz, name, paramTypes, returnType) {
+    static getMethodWrapperExact(clazz, name, paramTypes, returnType) {
         const expectedParamTypesSignature = paramTypes.join(", ");
         for (const overload of this.getClassWrapper(clazz)[name].overloads)
             if (expectedParamTypesSignature === overload.argumentTypes.map(type => type.className).join(", ") && returnType === overload.returnType.className)
@@ -128,7 +122,7 @@ class Helpers {
     }
 
     // I failed to name this function programatically (out of ideas).
-    magic(func, callback) {
+    static magic(func, callback) {
         let val;
         func(function() {
             val = callback.apply(this, arguments);
@@ -136,13 +130,14 @@ class Helpers {
         return val;
     }
 
-    onLibraryLoad(name, callback) {
+    static onLibraryLoad(name, callback) {
         if (callback === undefined || callback === null)
             throw new Error(`No callback specified for ${name}`);
         this.#callbacks.set(name, callback);
     }
 }
 
-// const helpers = new Helpers();
-
-// module.exports = helpers;
+// ESM
+// export Helpers;
+// CommonJS
+// module.exports = Helpers;
