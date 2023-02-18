@@ -6,78 +6,77 @@
 
 class Helpers {
 
-    static #cache = new Map();
-
     static #callbacks = new Map();
 
-    static #initialize = this.initializer();
+    static #cache = new Map();
 
-    static initializer() {
-        // Credits : iGio90(https://github.com/iGio90/frida-onload), FrenchYeti(https://github.com/FrenchYeti/interruptor)
-        const self = this;
-        const linker = Process.findModuleByName(Process.arch.includes("64") ? "linker64" : "linker");
-        if (linker !== null) {
-            // https://android.googlesource.com/platform/bionic/+/master/linker/linker.cpp
-            // void* do_dlopen(const char* name, int flags, const android_dlextinfo* extinfo, const void* caller_addr)
-            let do_dlopen_ptr = null;
-            // https://android.googlesource.com/platform/bionic/+/master/linker/linker_soinfo.cpp
-            // void soinfo::call_constructors()
-            let call_constructors_ptr = null;
-            for (const symbol of linker.enumerateSymbols()) {
-                const name = symbol.name;
-                if (name.includes("do_dlopen"))
-                    do_dlopen_ptr = symbol.address;
-                else if (name.includes("call_constructors"))
-                    call_constructors_ptr = symbol.address;
-                if (do_dlopen_ptr !== null && call_constructors_ptr !== null)
-                    break;
-            }
-            if (do_dlopen_ptr !== null && call_constructors_ptr !== null) {
-                let path = null;
-                Interceptor.attach(do_dlopen_ptr, {
-                    onEnter(args) {
-                        path = args[0].readUtf8String();
-                    }
-                });
-                Interceptor.attach(call_constructors_ptr, {
-                    onEnter(args) {
-                        if (path !== null) {
-                            const callbacks = self.#callbacks;
+    static #initialize = this.#initializer();
+
+    static #initializer() {
+        // Credits : https://github.com/iGio90/frida-onload, https://github.com/FrenchYeti/interruptor
+        const linker = Process.getModuleByName(this.is64Bit() ? "linker64" : "linker");
+        // https://android.googlesource.com/platform/bionic/+/master/linker/linker.cpp
+        // void* do_dlopen(const char* name, int flags, const android_dlextinfo* extinfo, const void* caller_addr)
+        let do_dlopen_ptr = null;
+        // https://android.googlesource.com/platform/bionic/+/master/linker/linker_soinfo.cpp
+        // void soinfo::call_constructors()
+        let call_constructors_ptr = null;
+        for (const symbol of linker.enumerateSymbols()) {
+            const name = symbol.name;
+            if (name.includes("do_dlopen"))
+                do_dlopen_ptr = symbol.address;
+            else if (name.includes("call_constructors"))
+                call_constructors_ptr = symbol.address;
+            if (do_dlopen_ptr !== null && call_constructors_ptr !== null)
+                break;
+        }
+        if (do_dlopen_ptr !== null && call_constructors_ptr !== null) {
+            const callbacks = this.#callbacks;
+            let path = null;
+            Interceptor.attach(do_dlopen_ptr, {
+                onEnter(args) {
+                    path = args[0].readUtf8String();
+                }
+            });
+            Interceptor.attach(call_constructors_ptr, {
+                onEnter(args) {
+                    if (path !== null) {
+                        const module = Process.findModuleByName(path);
+                        if (module !== null) {
                             for (const key of callbacks.keys())
                                 if (path.includes(key)) {
-                                    const module = Process.findModuleByName(path);
-                                    if (module !== null) {
-                                        console.log(`[*] Library loaded : ${key}`);
-                                        try {
-                                            callbacks.get(key)(module);
-                                        } catch (e) {
-                                            console.error(e);
-                                        }
-                                        callbacks.delete(key);
+                                    try {
+                                        callbacks.get(key)(module);
+                                    } catch (e) {
+                                        console.error(e);
                                     }
+                                    callbacks.delete(key);
                                     break;
                                 }
-                            path = null;
                         }
+                        path = null;
                     }
-                });
-                Interceptor.flush();
-            } else {
-                console.error(`[*] do_dlopen  : ${do_dlopen_ptr}`);
-                console.error(`[*] call_constructors : ${call_constructors_ptr}`);
-            }
+                }
+            });
+            Interceptor.flush();
         } else
-            console.error("[*] Failed to find linker");
+            console.error(`[*] do_dlopen  : ${do_dlopen_ptr}, call_constructors : ${call_constructors_ptr}`);
     }
 
-    static getMatched(array, property, must_contain) {
-        return array.filter(value => must_contain.every(str => value[property].includes(str)));
+    static onLibraryLoad(name, callback) {
+        if (callback === undefined || callback === null)
+            throw new Error(`No callback specified for ${name}`);
+        this.#callbacks.set(name, callback);
+    }
+
+    static is64Bit() {
+        return Process.arch.includes("64");
     }
 
     static getSpecificClassLoader(clazz) {
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
-                loader.loadClass(clazz, false);
+                Java.use("java.lang.Class").forName(clazz, false, loader);
                 return loader;
             } catch (e) {
                 // ignore and continue
@@ -93,7 +92,7 @@ class Helpers {
             return cache.get(clazz);
         for (const loader of Java.enumerateClassLoadersSync()) {
             try {
-                loader.loadClass(clazz, false);
+                Java.use("java.lang.Class").forName(clazz, false, loader);
                 const wrapper = Java.ClassFactory.get(loader).use(clazz);
                 cache.set(clazz, wrapper);
                 return wrapper;
@@ -114,18 +113,16 @@ class Helpers {
     }
 
     // I failed to name this function programatically (out of ideas).
-    static magic(func, callback) {
-        let val;
-        func(function() {
-            val = callback.apply(this, arguments);
+    static magic(fn, callback) {
+        let retval;
+        fn(function() {
+            retval = callback.apply(this, arguments);
         });
-        return val;
+        return retval;
     }
 
-    static onLibraryLoad(name, callback) {
-        if (callback === undefined || callback === null)
-            throw new Error(`No callback specified for ${name}`);
-        this.#callbacks.set(name, callback);
+    static getMatched(array, property, contains) {
+        return array.filter(value => contains.every(contain => value[property].includes(contain)));
     }
 }
 
