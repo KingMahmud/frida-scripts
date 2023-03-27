@@ -1,18 +1,5 @@
-// Created by Mahmud.
-
-/*
- * Copy into your script. 
- * Or include this file in your agent and uncomment the last lines as per your need
- * Then access the functions...
- * Example of another utility created using getMatched
- * function getMatchedSymbols(name, contains) {
- *    return Helpers.getMatched(Process.getModuleByName(name).enumerateSymbols(), "name", contains);
- * }
- * Example of using onLibraryLoad
- * Helpers.onLibraryLoad("libnative.so", function(module) {
- *     // module -> frida module object for that library
- * });
- */
+// Old implementation of registerNatives.js
+// Helpers.js used.
 
 class Helpers {
 
@@ -136,7 +123,32 @@ class Helpers {
     }
 }
 
-// ESM
-// export Helpers;
-// CommonJS
-// module.exports = Helpers;
+const library = "lib<whatever>.so";
+Helpers.onLibraryLoad(library, function(module) {
+    // jint RegisterNatives(JNIEnv *env, jclass clazz, const JNINativeMethod *methods, jint nMethods)
+    Interceptor.attach(Java.vm.getEnv().handle.readPointer().add(215 * Process.pointerSize).readPointer(), {
+        onEnter(args) {
+            if (!DebugSymbol.fromAddress(this.returnAddress).toString().includes(library))
+                return;
+            console.log("[*] env->RegisterNatives()");
+            const clazz = args[1];
+            console.log(`[*] Class : ${Java.vm.getEnv().getClassName(clazz)}`);
+            const nMethods = parseInt(args[3]);
+            console.log(`[*] Number of Methods : ${nMethods}`);
+            console.log("[*] Methods : ");
+            const methods = args[2];
+            for (let i = 0; i < nMethods; i++) {
+                const method = methods.add(i * Process.pointerSize * 3);
+                const methodName = method.readPointer().readUtf8String();
+                const signature = method.add(Process.pointerSize).readPointer().readUtf8String();
+                const fnPtr = method.add(Process.pointerSize * 2).readPointer();
+                const offset = fnPtr.sub(module.base);
+                console.log(`[*] ${i + 1}.
+[*] Method : ${methodName}
+[*] Signature : ${methodName}${signature}
+[*] FnPtr : ${fnPtr}
+[*] Offset : ${offset}`);
+            }
+        }
+    });
+});

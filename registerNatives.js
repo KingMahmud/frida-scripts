@@ -106,7 +106,7 @@ class Helpers {
         for (const overload of this.getClassWrapper(clazz)[name].overloads)
             if (expectedParamTypesSignature === overload.argumentTypes.map(type => type.className).join(", ") && returnType === overload.returnType.className)
                 return overload;
-        throw new Error(`${clazz}#${name}(${expectedParamTypesSignature})${returnType} not found`)
+        throw new Error(`${clazz}.${name}(${expectedParamTypesSignature})${returnType} not found`)
     }
 
     // I failed to name this function programatically (out of ideas).
