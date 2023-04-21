@@ -128,7 +128,7 @@ Helpers.onLibraryLoad(library, function(module) {
     // jint RegisterNatives(JNIEnv *env, jclass clazz, const JNINativeMethod *methods, jint nMethods)
     Interceptor.attach(Java.vm.getEnv().handle.readPointer().add(215 * Process.pointerSize).readPointer(), {
         onEnter(args) {
-            if (!DebugSymbol.fromAddress(this.returnAddress).toString().includes(library))
+            if (DebugSymbol.fromAddress(this.returnAddress).moduleName !== library)
                 return;
             console.log("[*] env->RegisterNatives()");
             const clazz = args[1];
