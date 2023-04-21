@@ -134,7 +134,7 @@ getMatchedSymbols("libart.so", ["art", "JNI", "RegisterNatives"]).forEach(symbol
     console.log(`[*] Intercepting ${symbol.name}`);
     Interceptor.attach(symbol.address, {
         onEnter(args) {
-            const module = Process.getModuleByName(DebugSymbol.fromAddress(this.returnAddress).moduleName);
+            const module = Process.findModuleByName(DebugSymbol.fromAddress(this.returnAddress).moduleName);
             const name = module.name;
             // if (name === library) {
             console.log(`[*] RegisterNatives`);
