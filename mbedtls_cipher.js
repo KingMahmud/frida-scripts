@@ -14,7 +14,7 @@ class Helpers {
 
     static #initializer() {
         // Credits : https://github.com/iGio90/frida-onload, https://github.com/FrenchYeti/interruptor
-        const linker = Process.getModuleByName(this.is64Bit() ? "linker64" : "linker");
+        const linker = Process.findModuleByName(this.is64Bit() ? "linker64" : "linker");
         // https://android.googlesource.com/platform/bionic/+/master/linker/linker.cpp
         // void* do_dlopen(const char* name, int flags, const android_dlextinfo* extinfo, const void* caller_addr)
         let do_dlopen_ptr = null;
@@ -42,7 +42,7 @@ class Helpers {
                 onEnter(args) {
                     if (path !== null) {
                         const module = Process.findModuleByName(path);
-                        if (module !== null) {
+                        if (module !== null)
                             for (const key of callbacks.keys())
                                 if (path.includes(key)) {
                                     try {
@@ -53,7 +53,6 @@ class Helpers {
                                     callbacks.delete(key);
                                     break;
                                 }
-                        }
                         path = null;
                     }
                 }

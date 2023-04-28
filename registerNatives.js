@@ -11,7 +11,7 @@ class Helpers {
 
     static #initializer() {
         // Credits : https://github.com/iGio90/frida-onload, https://github.com/FrenchYeti/interruptor
-        const linker = Process.getModuleByName(this.is64Bit() ? "linker64" : "linker");
+        const linker = Process.findModuleByName(this.is64Bit() ? "linker64" : "linker");
         // https://android.googlesource.com/platform/bionic/+/master/linker/linker.cpp
         // void* do_dlopen(const char* name, int flags, const android_dlextinfo* extinfo, const void* caller_addr)
         let do_dlopen_ptr = null;
@@ -39,7 +39,7 @@ class Helpers {
                 onEnter(args) {
                     if (path !== null) {
                         const module = Process.findModuleByName(path);
-                        if (module !== null) {
+                        if (module !== null)
                             for (const key of callbacks.keys())
                                 if (path.includes(key)) {
                                     try {
@@ -50,7 +50,6 @@ class Helpers {
                                     callbacks.delete(key);
                                     break;
                                 }
-                        }
                         path = null;
                     }
                 }
@@ -127,6 +126,19 @@ function getMatchedSymbols(name, contains) {
     return Helpers.getMatched(Process.getModuleByName(name).enumerateSymbols(), "name", contains);
 }
 
+function findModuleByAddress(address) {
+    const module = Process.findModuleByAddress(address);
+    if (module !== null)
+        return module;
+    const name = DebugSymbol.fromAddress(address).moduleName;
+    if (name !== null)
+        return Process.findModuleByName(name);
+    for (const each of Process.enumerateModules())
+        if (each.base <= address && address <= each.base.add(each.size))
+            return module;
+    return null;
+}
+
 // Uncomment line 131, 139 and 160 if you want to log for a specific library
 // const library = "lib<whatever>.so";
 getMatchedSymbols("libart.so", ["art", "JNI", "RegisterNatives"]).forEach(symbol => {
@@ -134,30 +146,32 @@ getMatchedSymbols("libart.so", ["art", "JNI", "RegisterNatives"]).forEach(symbol
     console.log(`[*] Intercepting ${symbol.name}`);
     Interceptor.attach(symbol.address, {
         onEnter(args) {
-            const module = Process.findModuleByName(DebugSymbol.fromAddress(this.returnAddress).moduleName);
-            const name = module.name;
-            // if (name === library) {
-            console.log(`[*] RegisterNatives`);
-            console.log(`[*] Library : ${name}`);
-            const clazz = args[1];
-            console.log(`[*] Class : ${Java.vm.getEnv().getClassName(clazz)}`);
-            const nMethods = parseInt(args[3]);
-            console.log(`[*] Number of Methods : ${nMethods}`);
-            console.log("[*] Methods : ");
-            const methods = args[2];
-            for (let i = 0; i < nMethods; i++) {
-                const method = methods.add(i * Process.pointerSize * 3);
-                const methodName = method.readPointer().readUtf8String();
-                const signature = method.add(Process.pointerSize).readPointer().readUtf8String();
-                const fnPtr = method.add(Process.pointerSize * 2).readPointer();
-                const offset = fnPtr.sub(module.base);
-                console.log(`[*] ${i + 1}.
+            const module = findModuleByAddress(this.returnAddress);
+            if (module !== null) {
+                const name = module.name;
+                // if (name === library) {
+                console.log(`[*] RegisterNatives`);
+                console.log(`[*] Library : ${name}`);
+                const clazz = args[1];
+                console.log(`[*] Class : ${Java.vm.getEnv().getClassName(clazz)}`);
+                const nMethods = parseInt(args[3]);
+                console.log(`[*] Number of Methods : ${nMethods}`);
+                console.log("[*] Methods : ");
+                const methods = args[2];
+                for (let i = 0; i < nMethods; i++) {
+                    const method = methods.add(i * Process.pointerSize * 3);
+                    const methodName = method.readPointer().readUtf8String();
+                    const signature = method.add(Process.pointerSize).readPointer().readUtf8String();
+                    const fnPtr = method.add(Process.pointerSize * 2).readPointer();
+                    const offset = fnPtr.sub(module.base);
+                    console.log(`[*] ${i + 1}.
 [*] Method : ${methodName}
 [*] Signature : ${methodName}${signature}
 [*] FnPtr : ${fnPtr}
 [*] Offset : ${offset}`);
+                }
+                // }
             }
-            // }
         }
     });
 });
