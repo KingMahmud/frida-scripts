@@ -139,7 +139,7 @@ function findModuleByAddress(address) {
     return null;
 }
 
-// Uncomment line 131, 139 and 160 if you want to log for a specific library
+// Uncomment line 143, 152 and 173 if you want to log for a specific library
 // const library = "lib<whatever>.so";
 getMatchedSymbols("libart.so", ["art", "JNI", "RegisterNatives"]).forEach(symbol => {
     // jint RegisterNatives(JNIEnv *env, jclass clazz, const JNINativeMethod *methods, jint nMethods)
