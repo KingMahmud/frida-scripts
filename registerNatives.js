@@ -135,7 +135,7 @@ function findModuleByAddress(address) {
         return Process.findModuleByName(name);
     for (const each of Process.enumerateModules())
         if (each.base <= address && address <= each.base.add(each.size))
-            return module;
+            return each;
     return null;
 }
 
